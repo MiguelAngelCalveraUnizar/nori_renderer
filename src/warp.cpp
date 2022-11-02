@@ -93,26 +93,22 @@ float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     // It's if the z is positive and the distance (sqrt(x^2+y^2+z^2) = 1)
     return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? INV_TWOPI: 0.0f;
 }
-
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
-    // Simple method to sample a disk:
-    float r = std::sqrt(sample[0]);
-    float theta = 2 * M_PI * sample[1];
-    // Now from disk to cosine weighted hemisphere
-    float x = r * std::cos(theta);
-    float y = r * std::sin(theta);
-    float z = std::sqrt(std::max((float)0, 1 - x * x - y * y));
-    return Vector3f(x,y,z);
+	float x,y,z;
+	x = std::cos(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+	y = std::sin(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+    z = std::sqrt(std::max((float)0, (float)1 - sample[0]));
+	return Vector3f(x,y,z);
     //throw NoriException("Warp::squareToCosineHemisphere() is not yet implemented!");
 }
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
-    float cos_theta = v[2];
-    float sin_theta = std::sin(std::acos(cos_theta));
-    //if (cos_theta < 0) cos_theta = -cos_theta;
-    //if (sin_theta < 0) sin_theta = -sin_theta;
-    return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? sin_theta * cos_theta * INV_PI : 0.0f;
-    //throw NoriException("Warp::squareToCosineHemispherePdf() is not yet implemented!");
+    float result, r;
+	r = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	if( r >= 1 - 1e-04 && r <= 1 + 1e-04 && v[2] >= 0 ) result = v[2]/(r*M_PI); // p = cos(theta)/PI 
+	else result = 0;
+    return result;
+	//throw NoriException("Warp::squareToCosineHemispherePdf() is not yet implemented!");
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
