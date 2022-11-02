@@ -53,13 +53,10 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
         1 - spx,
         py * spx
     );
-    //throw NoriException("Warp::squareToUniformTriangle() is not yet implemented!");
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    // 1/2 is the area of the triangle
     return ((p.array() >= 0).all() && (p.array() <= 1).all() && p[0]+p[1] < 1) ? 2.0f : 0.0f;
-    //throw NoriException("Warp::squareToUniformTrianglePdf() is not yet implemented!");
 }
 
 
@@ -71,18 +68,13 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
         std::sin(2 * M_PI * sample[1]) * sz,
         z
     );
-    //throw NoriException("Warp::squareToUniformSphere() is not yet implemented!");
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     return (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001) ? INV_FOURPI : 0.0f;
-    //throw NoriException("Warp::squareToUniformSpherePdf() is not yet implemented!");
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    // Implement a method that transforms uniformly distributed 2D points on the
-    // unit square into uniformly distributed points on the unit hemisphere centered at the
-    // origin and oriented in direction(0, 0, 1).
     float z = sample[0];
     float r = std::sqrt(std::max((float)0, (float)1. - z * z));
     float phi = 2 * M_PI * sample[1];
@@ -90,25 +82,23 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
 }
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    // It's if the z is positive and the distance (sqrt(x^2+y^2+z^2) = 1)
     return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? INV_TWOPI: 0.0f;
 }
+
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
-	float x,y,z;
-	x = std::cos(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
-	y = std::sin(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+    float x,y,z;
+    x = std::cos(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+    y = std::sin(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
     z = std::sqrt(std::max((float)0, (float)1 - sample[0]));
-	return Vector3f(x,y,z);
-    //throw NoriException("Warp::squareToCosineHemisphere() is not yet implemented!");
+    return Vector3f(x,y,z);
 }
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     float result, r;
 	r = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-	if( r >= 1 - 1e-04 && r <= 1 + 1e-04 && v[2] >= 0 ) result = v[2]/(r*M_PI); // p = cos(theta)/PI 
+	if( r >= 1 - 1e-04 && r <= 1 + 1e-04 && v[2] >= 0 ) result = v[2]*INV_PI/r; // p = cos(theta)/PI 
 	else result = 0;
     return result;
-	//throw NoriException("Warp::squareToCosineHemispherePdf() is not yet implemented!");
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
@@ -132,7 +122,6 @@ Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
     y = sintheta * std::sin(phi);
     z = costheta;
 
-    //throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
     return Vector3f(x,y,z);
 }
 
@@ -145,7 +134,6 @@ float Warp::squareToBeckmannPdf(const Vector3f &v, float alpha) {
     prob = 2*std::sin(theta) * std::expf(-tan_theta * tan_theta / alpha2) / (alpha2 * cos_theta * cos_theta * cos_theta);
     if (std::isnan(prob)) prob = 0;
     return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? prob : 0.0f;
-    //throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
 }
 
 NORI_NAMESPACE_END
