@@ -140,7 +140,7 @@ float Warp::squareToBeckmannPdf(const Vector3f &v, float alpha) {
     alpha2 = alpha * alpha;
     // From z we have cos theta and tan
     cos_theta = v[2];
-
+   
     if (cos_theta == 0) {
         prob = 0;
     }else {
@@ -148,7 +148,6 @@ float Warp::squareToBeckmannPdf(const Vector3f &v, float alpha) {
         denom = M_PI * alpha2 * cos_theta * cos_theta * cos_theta;
         prob = std::exp(-tan2theta / alpha2) / denom;
     }
-
     return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? prob : 0.0f;
 }
 
