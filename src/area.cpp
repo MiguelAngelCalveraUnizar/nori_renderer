@@ -48,17 +48,31 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		// This function call can be done by bsdf sampling routines.
-		// Hence the ray was already traced for us - i.e a visibility test was already performed.
-		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		throw NoriException("AreaEmitter::eval() is not yet implemented!");
+		// Check if lRec.n and lRec.wi are not backfacing
+		float dot = lRec.n.dot(lRec.wi);
+		Color3f rad = Color3f(0);
+		if (dot <= 0) {
+			// dot lower or equal to 0 then it's not backfacing
+			rad = m_radiance->eval(lRec.uv);
+		}
+		return rad;
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
-		if (!m_mesh)
+		if (!m_mesh) {
 			throw NoriException("There is no shape attached to this Area light!");
+		}
+		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
+		lRec.dist = (lRec.p - lRec.ref).norm();
+		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
+		
+		// Calculate Angular probability
+		float prob_s = m_mesh->pdf(lRec.p);
+		float denom = (std::abs(lRec.n.dot(lRec.wi)));
+		float norm = lRec.dist;
+		lRec.pdf = prob_s * norm * norm/ denom;
 
-		throw NoriException("AreaEmitter::sample() is not yet implemented!");
+		return eval(lRec);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -68,8 +82,7 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
-
-		throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+		return lRec.pdf;
 	}
 
 
