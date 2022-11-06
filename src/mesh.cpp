@@ -45,6 +45,13 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
+    // We put a probability that is the surface area for each triangle:
+    for (n_UINT i = 0;i < m_F.cols();++i) {
+        m_pdf.append(surfaceArea(i));
+    }
+    
+    // Now we normalize the pdf, so it divides everything by the total area (now the sum is 1):
+    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(n_UINT index) const {
@@ -112,17 +119,58 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  * \brief Uniformly sample a position on the mesh with
  * respect to surface area. Returns both position and normal
  */
-void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
+void Mesh::samplePosition(const Point2f& sample, Point3f& p, Normal3f& n, Point2f& uv) const
 {
-	throw NoriException("Mesh::samplePosition() is not yet implemented!");	
+    // Get things from the mesh:
+    const MatrixXf& V = getVertexPositions();
+    const MatrixXf& N = getVertexNormals();
+    const MatrixXu& F = getIndices();
+    const MatrixXf& UV = getVertexTexCoords();
+
+    // Sample a triangle from the mesh at random
+    Point2f sampledUV = Warp::squareToUniformTriangle(sample);
+
+    // Get point in barycentric coordinates
+    Vector3f bary = Vector3f(sampledUV[0], sampledUV[1], 1 - sampledUV[1] - sampledUV[0]);
+    
+    // Resample
+    float third_sample = sample[0];
+    m_pdf.sampleReuse(third_sample); // Allow to re-use the sample
+
+    //Use the sample to get a triangle by it's area (m_pdf is a discrete pdf defined by areaTriangle/totalArea)
+    size_t inxT = m_pdf.sample(third_sample);
+
+    // Get sampled triangle points p0, p1 and p2
+    n_UINT idx0 = F(0, inxT), idx1 = F(1, inxT), idx2 = F(2, inxT);
+    Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
+    
+    // Get coordinates of point by interpolation:
+    p = bary.x() * p0 + bary.y() * p1 + bary.z() * p2;
+    // Now we get the normal
+    if (N.size() > 0) {
+        n = (bary.x() * N.col(idx0) +
+            bary.y() * N.col(idx1) +
+            bary.z() * N.col(idx2)).normalized();
+    }else {
+        n = (p1 - p0).cross(p2 - p0).normalized();
+    }
+
+    // Finally get correct uv coordinates
+    if (UV.size() > 0)
+        uv = bary.x() * UV.col(idx0) +
+        bary.y() * UV.col(idx1) +
+        bary.z() * UV.col(idx2);
+
 }
 
-/// Return the surface area of the given triangle
+/// Returns the PDF of sampling a point on the mesh
 float Mesh::pdf(const Point3f &p) const
 {
-	throw NoriException("Mesh::pdf() is not yet implemented!");	
-	
-	return 0.;
+    float prob = 0;
+    if (m_pdf.isNormalized()) {
+        prob = m_pdf.getNormalization();
+    }
+	return prob;
 }
 
 
