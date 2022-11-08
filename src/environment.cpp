@@ -79,15 +79,29 @@ public:
 	}
 
 	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
+		//Generar sample en cuadrado unitario
+		//Mapear el sample a la esfera
+		//Obtener la direccion que une el centro de la esfera y su punto 3D sampleado
+		//Para obtener la dirección, pasar el vector obtenido a coordenadas del mundo?
 
-		throw NoriException("EnvironmentEmitter::sample() is not yet implemented!");
+		//Sample the point
+		Vector3f spherePoint = Warp::squareToUniformSphere(sample); //Transform to world coord.?
+		//lRec.p = Point3f(spherePoint[0], spherePoint[1], spherePoint[2]);
+		Point3f sampledPointSphere = Point3f(spherePoint[0], spherePoint[1], spherePoint[2]);
+		lRec.p = Point3f(1, 1, 1) * INFINITY;
+		lRec.dist = INFINITY;
+		lRec.wi = (sampledPointSphere - lRec.ref) / (sampledPointSphere - lRec.ref).norm();
+		
+		lRec.pdf = Warp::squareToUniformSpherePdf(spherePoint);
+		return eval(lRec) * m_radiance;
+		//return m_radiance * INV_FOURPI;
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
 	virtual float pdf(const EmitterQueryRecord& lRec) const {
-		throw NoriException("EnvironmentEmitter::pdf() is not yet implemented!");
+		return lRec.pdf;
 	}
 
 
