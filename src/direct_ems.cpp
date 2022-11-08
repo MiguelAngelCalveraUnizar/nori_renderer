@@ -10,10 +10,9 @@ class DirectEmitterSampling : public Integrator {
 public:
 	DirectEmitterSampling(const PropertyList& props) {
 		//N_samples = props.getInteger("N_samples");
-		std::cout << "Integrador creado" << N_samples << endl;
+		//std::cout << "Integrador creado " << N_samples << endl;
 	}
 protected:
-	int N_samples = 1;
 
 	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
 		Color3f Lo(0.);
@@ -24,21 +23,23 @@ protected:
 		if (!scene->rayIntersect(ray, its))
 			return scene->getBackground(ray);
 
-		//Average every sample
-		for (int k = 0; k < N_samples;k++) {
-			//Sample randomly a light source
-			float pdf_light;
-			const Emitter* light = scene->sampleEmitter(sampler->next1D(), pdf_light); 	//const Emitter *sampleEmitter(float rnd, float &pdf) const;
-			//Sample the light
-			EmitterQueryRecord emitterRecord(its.p);
-			Color3f Li = light->sample(emitterRecord, sampler->next2D(), 0.);
-
-			//Visibility check
-			Ray3f sray(its.p, emitterRecord.wi);
-			Intersection it_shadow;
-			if (scene->rayIntersect(sray, it_shadow))
-				if (it_shadow.t < (emitterRecord.dist - 1.e-5))
-					continue;
+		//Sample randomly a light source
+		float pdf_light;
+		const Emitter* light = scene->sampleEmitter(sampler->next1D(), pdf_light); 	//const Emitter *sampleEmitter(float rnd, float &pdf) const;
+		//Sample the light
+		EmitterQueryRecord emitterRecord(its.p);
+		Color3f Li = light->sample(emitterRecord, sampler->next2D(), 0.);
+		Color3f Le(0.);
+		//Visibility check
+		Ray3f sray(its.p, emitterRecord.wi);
+		Intersection it_shadow;
+		bool computeRadiance = true;
+		if (scene->rayIntersect(sray, it_shadow)) {
+			if (it_shadow.t < (emitterRecord.dist - 1.e-5)) {
+				computeRadiance = false;
+			}
+		}
+		if(computeRadiance){
 			//BSDF 
 			BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),
 				its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
@@ -48,13 +49,14 @@ protected:
 			//float prob_light = light->pdf(emitterRecord);
 
 			//Accumulate the sample
-			sum += (Li * its.mesh->getBSDF()->eval(bsdfRecord) *
+			sum = (Li * its.mesh->getBSDF()->eval(bsdfRecord) *
 				its.shFrame.n.dot(emitterRecord.wi)) / (pdf_light * pdf_light_point);
+
+			if (its.mesh->isEmitter())
+				Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
+				
+			Lo = Le + sum;
 		}
-		Color3f Le(0.);
-		if (its.mesh->isEmitter())
-			Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
-		Lo = Le + sum / N_samples;
 		return Lo;
 	}
 
