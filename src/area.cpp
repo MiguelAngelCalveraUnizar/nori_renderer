@@ -52,7 +52,7 @@ public:
 		float dot = lRec.n.dot(lRec.wi);
 		Color3f rad = Color3f(0);
 		if (dot <= 0) {
-			// dot lower or equal to 0 then it's not backfacing
+			// dot lower than 0 then it's not backfacing
 			rad = m_radiance->eval(lRec.uv);
 		}
 		return rad;
@@ -65,8 +65,7 @@ public:
 		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 		lRec.dist = (lRec.p - lRec.ref).norm();
 		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
-		
-		// Calculate Angular probability
+
 		float prob_s = m_mesh->pdf(lRec.p);
 		float denom = (std::abs(lRec.n.dot(lRec.wi)));
 		float norm = lRec.dist;
@@ -82,6 +81,7 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
+		// TODO:
 		return lRec.pdf;
 	}
 
