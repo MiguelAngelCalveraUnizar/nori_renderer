@@ -135,11 +135,9 @@ void Mesh::samplePosition(const Point2f& sample, Point3f& p, Normal3f& n, Point2
     
     // Resample
     float third_sample = sample[0];
-    m_pdf.sampleReuse(third_sample); // Allow to re-use the sample
 
     //Use the sample to get a triangle by it's area (m_pdf is a discrete pdf defined by areaTriangle/totalArea)
-    size_t inxT = m_pdf.sample(third_sample);
-
+    size_t inxT = m_pdf.sampleReuse(third_sample);
     // Get sampled triangle points p0, p1 and p2
     n_UINT idx0 = F(0, inxT), idx1 = F(1, inxT), idx2 = F(2, inxT);
     Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
