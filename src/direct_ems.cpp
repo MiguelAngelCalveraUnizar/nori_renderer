@@ -9,8 +9,6 @@ NORI_NAMESPACE_BEGIN
 class DirectEmitterSampling : public Integrator {
 public:
 	DirectEmitterSampling(const PropertyList& props) {
-		//N_samples = props.getInteger("N_samples");
-		//std::cout << "Integrador creado " << N_samples << endl;
 	}
 protected:
 
@@ -33,7 +31,6 @@ protected:
 		//Visibility check
 		Ray3f sray(its.p, emitterRecord.wi);
 		Intersection it_shadow;
-		bool computeRadiance = true;
 		if (scene->rayIntersect(sray, it_shadow)) {
 			if (it_shadow.t < (emitterRecord.dist - 1.e-5)) {
 				computeRadiance = false;
@@ -46,7 +43,6 @@ protected:
 
 			//Probability of the sample of the point of the light source
 			float pdf_light_point = light->pdf(emitterRecord);
-			//float prob_light = light->pdf(emitterRecord);
 
 			//Accumulate the sample
 			sum = (Li * its.mesh->getBSDF()->eval(bsdfRecord) *
