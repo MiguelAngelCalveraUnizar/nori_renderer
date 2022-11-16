@@ -77,7 +77,10 @@ public:
             return 0.0f;
 
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
-        return Warp::squareToBeckmannPdf(bRec.wo, alpha);
+
+        Vector3f wh = (bRec.wi + bRec.wo);
+        wh.normalize();
+        return Warp::squareToBeckmannPdf(wh, alpha);
     }
 
     /// Sample the BRDF
@@ -89,12 +92,24 @@ public:
         // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
-
+        
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
         bRec.measure = ESolidAngle;
-        bRec.wo = Warp::squareToBeckmann(_sample, alpha);
+        
+        // Sampling wo directly
+        // bRec.wo = Warp::squareToBeckmann(_sample, alpha);
+        // Sampling wh and getting wo from it.
+        Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
+        bRec.wo = (wh - bRec.wi).normalized();
+        
         // Return the value 
-        return eval(bRec) * Frame::cosTheta(bRec.wi) / (pdf(bRec));
+        float pdf_sample = pdf(bRec);
+        if (pdf_sample < FLT_EPSILON) {
+            return Color3f(0.0f);
+        }
+        else {
+            return eval(bRec) * Frame::cosTheta(bRec.wo) / (pdf_sample);
+        }
     }
 
     bool isDiffuse() const {
