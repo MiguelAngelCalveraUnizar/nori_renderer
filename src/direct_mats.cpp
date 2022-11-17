@@ -21,39 +21,34 @@ public:
         if (!scene->rayIntersect(ray, its)) {
             return scene->getBackground(ray);
         }
-        
+        // Now we have its.toLocal(-ray.d)->wi. its.uv is uv.
         BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d), its.uv);
-        // Wo and wi estan cambiados.
 
         // We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
         Color3f fr = its.mesh->getBSDF()->sample(bsdfRecord, sampler->next2D());
 
-        //if (isnan(fr.mean()) || isnan(fr[0]) || isnan(fr[1]) || isnan(fr[2])) {
-        //    cout << "Ups" << endl;
-        //}
-        bsdfRecord.measure = ESolidAngle;
+        // bsdfRecord.measure = ESolidAngle;
         // Ray from p with wo to see if it intersects in a emitter
-        Ray3f next_ray(its.p, bsdfRecord.wo);
+        Ray3f next_ray(its.p, its.toWorld(bsdfRecord.wo));
         Intersection it_next;
         if (scene->rayIntersect(next_ray, it_next)){
             // If it intersects with something, then we check if the intersection is in a emitter.
             if (it_next.mesh->isEmitter()) {
-                Li = it_next.mesh->getEmitter()->eval(EmitterQueryRecord(it_next.p));
+                /*
+                EmitterQueryRecord(const Emitter* emitter,
+        const Point3f& ref, const Point3f& p,
+        const Normal3f& n, const Point2f& uv) : emitter(emitter), ref(ref), p(p), n(n), uv(uv){
+                */
+                //Normal3f n = it_next.toWorld(Normal3f(0,0,1)); // ¿?
+                
+                EmitterQueryRecord queryLight = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
+                Li = it_next.mesh->getEmitter()->eval(queryLight);
                 Li = Li * fr;
             }
-        }
-        else {
-            // If it doesn't intersect, then we get the value from the background. 
-            // Especially important for enviroment lights
+        }else {
             Li = fr * scene->getBackground(next_ray); // For some reason getBackground sometimes gives Nan
-            if (isnan(Li.mean())) {
-                Li = Color3f(0.0f);
-            }
         }
-        float Li_mean_check = Li.mean();
-        if (isnan(Li_mean_check)) {
-            cout << "what" << endl;
-        }
+        
         // If we intersected at first with an Emitter add the Le from it.
         if (its.mesh->isEmitter()) {
             Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
