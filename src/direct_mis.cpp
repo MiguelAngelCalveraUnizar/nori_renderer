@@ -55,9 +55,14 @@ public:
 			//Probability of the sample of the point of the light source
 			float pdf_light_point = light->pdf(emitterRecordEms);
 
+			//Compute the p_em(sample ems)
+			float p_em_wem = pdf_light_point * pdf_light;
 			//Accumulate the sample
 			Li_ems *=  (its.mesh->getBSDF()->eval(bsdfRecordEms) *
-				its.shFrame.n.dot(emitterRecordEms.wi)) / (pdf_light * pdf_light_point);
+				its.shFrame.n.dot(emitterRecordEms.wi)) / p_em_wem;
+
+
+			
 		}
 
 		//***************//
@@ -67,7 +72,8 @@ public:
 
         // We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
         Color3f fr = its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
-
+		//Compute the p_mat(sample mats)
+		float p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
         // Ray from p with wo to see if it intersects in a emitter
         Ray3f next_ray(its.p, its.toWorld(bsdfRecordMat.wo));
         Intersection it_next;
