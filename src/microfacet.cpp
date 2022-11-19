@@ -2,10 +2,10 @@
     This file is part of Nori, a simple educational ray tracer
 
     Copyright (c) 2015 by Wenzel Jakob
-	
-	v1 - Dec 01 2020
+
+    v1 - Dec 01 2020
     v2 - Oct 30 2021
-	Copyright (c) 2021 by Adrian Jarabo
+    Copyright (c) 2021 by Adrian Jarabo
 
     Nori is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -59,7 +59,7 @@ public:
         float alpha = m_alpha->eval(bRec.uv).mean();
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float cosThetaO = Frame::cosTheta(bRec.wo);
-        
+
         float D = Reflectance::BeckmannNDF(wh, alpha);
         Color3f F = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
         float G = Reflectance::G1(bRec.wi, wh, alpha) * Reflectance::G1(bRec.wo, wh, alpha);
@@ -91,16 +91,16 @@ public:
         // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
-        
+
         // float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         bRec.measure = ESolidAngle;
-        
+
         // Sampling wh and getting wo from it.
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
-        bRec.wo = (-bRec.wi + 2*bRec.wi.dot(wh)*wh);
+        bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
         bRec.wo.normalize();
-        
+
         // Return the value 
         float pdf_sample = pdf(bRec);
         if (pdf_sample < FLT_EPSILON) {
@@ -321,25 +321,26 @@ public:
         is wrong, or when queried for illumination on the backside */
 
         //Shortcuts
-        
-        //float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
-        //Sample the half vector 
-        Vector3f wh = (bRec.wi + bRec.wo) / (bRec.wo + bRec.wi).norm();
+        float cosThetaI = Frame::cosTheta(bRec.wi);
+        float cosThetaO = Frame::cosTheta(bRec.wo);
 
-        //Compute the Fresnell term 
-        //float F = Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR);
 
-        //std::cout << "PDF computed" << endl;
         if (bRec.measure != ESolidAngle
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-        //if (abs(bRec.wo.dot(Reflectance::refract(bRec.wi, wh, m_extIOR, m_intIOR))) < 1e-03 ) //Check the 
-            //return Warp::squareToCosineHemispherePdf(bRec.wo); //Diffuse
-        //else
-        return Warp::squareToBeckmannPdf(wh, alpha); //Microfacet
+        //Compute the half vector 
+        Vector3f wh = (bRec.wi + bRec.wo) / (bRec.wo + bRec.wi).norm();
+
+        //Compute the Fresnell term 
+        float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
+
+        //Weight the possible options of the RR because we can´t know how the sample was generated
+        float p_diffuse = F * Warp::squareToBeckmannPdf(wh, alpha);
+        float p_microfacet = (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+        return p_diffuse + p_diffuse;
     }
 
     /// Sample the BRDF
@@ -367,11 +368,11 @@ public:
         //Russian Roulette 
         if (F < rand()) {
             //Sample the half vector
-            
+
             //float p_wh = Reflectance::BeckmannNDF(wh, alpha);
             //bRec.wo = Warp::squareToBeckmann(_sample, alpha);//(wh - bRec.wi) / (wh - bRec.wi).norm(); //Microfacet
             //p_RR = F * Warp::squareToBeckmannPdf(bRec.wo, alpha);
-            
+
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
             //bRec.wo = Reflectance::refract(bRec.wi, wh, m_extIOR, m_intIOR);
             bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
@@ -389,9 +390,13 @@ public:
         }
 
         float pdf_total = p_RR;
+        //float pdf_total = pdf(bRec); //Both ways should be equivalent
+
+        /*
         if (pdf_total < FLT_EPSILON) {
             return Color3f(0);
         }
+        */
         return eval(bRec) * Frame::cosTheta(bRec.wo) / (pdf_total);
     }
 
@@ -415,7 +420,7 @@ public:
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
             }
-            else 
+            else
                 throw NoriException("RoughSubstrate::addChild(<%s>,%s) is not supported!",
                     classTypeName(obj->getClassType()), name);
             break;
