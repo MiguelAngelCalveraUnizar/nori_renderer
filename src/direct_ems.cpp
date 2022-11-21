@@ -28,31 +28,31 @@ protected:
 		EmitterQueryRecord emitterRecord(its.p);
 		Color3f Li = light->sample(emitterRecord, sampler->next2D(), 0.);
 		Color3f Le(0.);
+
+		if (its.mesh->isEmitter()) {
+			Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
+		}
+
 		//Visibility check
 		Ray3f sray(its.p, emitterRecord.wi);
 		Intersection it_shadow;
 		if (scene->rayIntersect(sray, it_shadow)) {
 			if (it_shadow.t < (emitterRecord.dist - 1.e-5)) {
-				computeRadiance = false;
+				return Le;
 			}
 		}
-		if(computeRadiance){
-			//BSDF 
-			BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),
-				its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
+		//BSDF 
+		BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),
+			its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
 
-			//Probability of the sample of the point of the light source
-			float pdf_light_point = light->pdf(emitterRecord);
+		//Probability of the sample of the point of the light source
+		float pdf_light_point = light->pdf(emitterRecord);
 
-			//Accumulate the sample
-			sum = (Li * its.mesh->getBSDF()->eval(bsdfRecord) *
-				its.shFrame.n.dot(emitterRecord.wi)) / (pdf_light * pdf_light_point);
+		//Accumulate the sample
+		sum = (Li * its.mesh->getBSDF()->eval(bsdfRecord) *
+			its.shFrame.n.dot(emitterRecord.wi)) / (pdf_light * pdf_light_point);
 
-			if (its.mesh->isEmitter())
-				Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
-				
-			Lo = Le + sum;
-		}
+		Lo = Le + sum;
 		return Lo;
 	}
 
