@@ -65,12 +65,7 @@ public:
 		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 		lRec.dist = (lRec.p - lRec.ref).norm();
 		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
-
-		float prob_s = m_mesh->pdf(lRec.p);
-		float denom = (std::abs(lRec.n.dot(lRec.wi)));
-		float norm = lRec.dist;
-		lRec.pdf = prob_s * norm * norm/ denom;
-
+		lRec.pdf = this->pdf(lRec);
 		return eval(lRec);
 	}
 
@@ -82,7 +77,10 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		// TODO:
-		return lRec.pdf;
+		float prob_s = m_mesh->pdf(lRec.p);
+		float denom = (std::abs(lRec.n.dot(lRec.wi)));
+		float norm = lRec.dist;
+		return prob_s * norm * norm / denom;
 	}
 
 
