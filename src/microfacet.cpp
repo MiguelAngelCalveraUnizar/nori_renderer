@@ -2,10 +2,10 @@
     This file is part of Nori, a simple educational ray tracer
 
     Copyright (c) 2015 by Wenzel Jakob
-	
-	v1 - Dec 01 2020
+
+    v1 - Dec 01 2020
     v2 - Oct 30 2021
-	Copyright (c) 2021 by Adrian Jarabo
+    Copyright (c) 2021 by Adrian Jarabo
 
     Nori is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -50,19 +50,21 @@ public:
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
+        // TODO: 
 
         Vector3f wh = (bRec.wi + bRec.wo);
         wh.normalize();
 
+        //float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float cosThetaO = Frame::cosTheta(bRec.wo);
-        
+
         float D = Reflectance::BeckmannNDF(wh, alpha);
         Color3f F = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
         float G = Reflectance::G1(bRec.wi, wh, alpha) * Reflectance::G1(bRec.wo, wh, alpha);
 
-        return D * F * G / (4 * cosThetaI * cosThetaO);
+        return D * F * G / (4 * cosThetaI * cosThetaO); //return fr
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -74,6 +76,7 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
+        //float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
         return Warp::squareToBeckmannPdf(wh, alpha);
@@ -88,17 +91,16 @@ public:
         // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
-        
+
         // float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         bRec.measure = ESolidAngle;
-        
+
         // Sampling wh and getting wo from it.
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
-        // Calculate wo with equation from https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
-        bRec.wo = (-bRec.wi + 2*bRec.wi.dot(wh)*wh);
+        bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
         bRec.wo.normalize();
-        
+
         // Return the value 
         float pdf_sample = pdf(bRec);
         if (pdf_sample < FLT_EPSILON) {
@@ -177,6 +179,7 @@ public:
         /* This is a smooth BSDF -- return zero if the measure is wrong */
         if (bRec.measure != ESolidAngle)
             return Color3f(0.0f);
+
 
         throw NoriException("RoughDielectric::eval() is not yet implemented!");
     }
@@ -286,6 +289,7 @@ public:
             || cosThetaO <= 0)
             return Color3f(0.0f);
 
+        // f_r = f_diff + f_mf
         Color3f f_diff(0.0f);
         Color3f f_mf(0.0f);
 
@@ -301,14 +305,15 @@ public:
         //float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         f_mf = (Reflectance::BeckmannNDF(wh, alpha) *
-            Reflectance::fresnel(bRec.wo.dot(wh), m_extIOR, m_intIOR) *
+            Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR) *
             Reflectance::G1(bRec.wi, wh, alpha) *
             Reflectance::G1(bRec.wo, wh, alpha)) /
             (4 * cosThetaI * cosThetaO);
 
-        float F = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
-        return  Color3f(F* f_mf + (1-F)*f_diff);
+        //std::cout << "f = " << Color3f(f_diff + f_mf).toString() << endl;
+        float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
+        return  Color3f(f_diff + f_mf);
+        //throw NoriException("RoughSubstrate::eval() is not yet implemented!");
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -316,17 +321,27 @@ public:
         /* This is a smooth BRDF -- return zero if the measure
         is wrong, or when queried for illumination on the backside */
 
+        //Shortcuts
         float alpha = m_alpha->eval(bRec.uv).mean();
-        //Sample the half vector 
-        Vector3f wh = (bRec.wi + bRec.wo) / (bRec.wo + bRec.wi).norm();
+        float cosThetaI = Frame::cosTheta(bRec.wi);
+        float cosThetaO = Frame::cosTheta(bRec.wo);
+
 
         if (bRec.measure != ESolidAngle
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
             return 0.0f;
 
-        float F = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-        return F * Warp::squareToBeckmannPdf(wh, alpha) + (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+        //Compute the half vector 
+        Vector3f wh = (bRec.wi + bRec.wo) / (bRec.wo + bRec.wi).norm();
+
+        //Compute the Fresnell term 
+        float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
+
+        //Weight the possible options of the RR because we can´t know how the sample was generated
+        float p_microfacet = F * Warp::squareToBeckmannPdf(wh, alpha);
+        float p_diffuse = (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+        return p_diffuse + p_diffuse;
     }
 
     /// Sample the BRDF
@@ -340,6 +355,7 @@ public:
         //Shortcuts
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float alpha = m_alpha->eval(bRec.uv).mean();
+        float p_RR;
         bRec.measure = ESolidAngle;
         //std::cout << "Sample computed" << endl;
 
@@ -350,22 +366,28 @@ public:
         float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
 
         //Russian Roulette 
-        if (F < rand()) {
+        if (rand() < F) { //Microfacet
             //Sample the half vector
 
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
+            //bRec.wo = Reflectance::refract(bRec.wi, wh, m_extIOR, m_intIOR);
             bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
             bRec.wo.normalize();
+            p_RR = F * Warp::squareToBeckmannPdf(wh, alpha);
+
         }
-        else {
+        else { //Diffuse
+
+            //Sample wo
             bRec.wo = Warp::squareToCosineHemisphere(_sample);
+            //Vector3f wh = (bRec.wo + bRec.wi).normalized();
+            p_RR = (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
         }
 
-        float pdf_total = pdf(bRec);
-        if (pdf_total < FLT_EPSILON) {
-            return Color3f(0);
-        }
-        return eval(bRec) * Frame::cosTheta(bRec.wo) / (pdf(bRec));
+        float pdf_total = p_RR;
+        //float pdf_total = pdf(bRec); //Both ways should be equivalent
+
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
     bool isDiffuse() const {
@@ -388,7 +410,7 @@ public:
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
             }
-            else 
+            else
                 throw NoriException("RoughSubstrate::addChild(<%s>,%s) is not supported!",
                     classTypeName(obj->getClassType()), name);
             break;

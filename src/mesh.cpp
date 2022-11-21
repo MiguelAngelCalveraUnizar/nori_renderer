@@ -1,20 +1,16 @@
 /*
+  /*
     This file is part of Nori, a simple educational ray tracer
-
     Copyright (c) 2015 by Wenzel Jakob
-
     v1 - Dec 2020
     Copyright (c) 2020 by Adrian Jarabo
-
     Nori is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
     as published by the Free Software Foundation.
-
     Nori is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
@@ -135,9 +131,11 @@ void Mesh::samplePosition(const Point2f& sample, Point3f& p, Normal3f& n, Point2
     
     // Resample
     float third_sample = sample[0];
+    m_pdf.sampleReuse(third_sample); // Allow to re-use the sample
 
     //Use the sample to get a triangle by it's area (m_pdf is a discrete pdf defined by areaTriangle/totalArea)
-    size_t inxT = m_pdf.sampleReuse(third_sample);
+    size_t inxT = m_pdf.sample(third_sample);
+
     // Get sampled triangle points p0, p1 and p2
     n_UINT idx0 = F(0, inxT), idx1 = F(1, inxT), idx2 = F(2, inxT);
     Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);

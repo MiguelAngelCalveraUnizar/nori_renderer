@@ -22,43 +22,44 @@
 
 NORI_NAMESPACE_BEGIN
 
-Point2f Warp::squareToUniformSquare(const Point2f &sample) {
+Point2f Warp::squareToUniformSquare(const Point2f& sample) {
     return sample;
 }
 
-float Warp::squareToUniformSquarePdf(const Point2f &sample) {
+float Warp::squareToUniformSquarePdf(const Point2f& sample) {
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
 
-Point2f Warp::squareToTent(const Point2f &sample) {
+Point2f Warp::squareToTent(const Point2f& sample) {
     throw NoriException("Warp::squareToTent() is not yet implemented!");
 }
 
-float Warp::squareToTentPdf(const Point2f &p) {
+float Warp::squareToTentPdf(const Point2f& p) {
     throw NoriException("Warp::squareToTentPdf() is not yet implemented!");
 }
 
-Point2f Warp::squareToUniformDisk(const Point2f &sample) {
+Point2f Warp::squareToUniformDisk(const Point2f& sample) {
     float r, theta, xOff, yOff, pi_4;
     pi_4 = (float)M_PI_2 / 2;
     xOff = 2 * sample[0] - 1;
     yOff = 2 * sample[1] - 1;
 
-    if (xOff == 0 && yOff == 0){
+    if (xOff == 0 && yOff == 0) {
         return Point2f(0, 0);
     }
 
     if (std::abs(xOff) > std::abs(yOff)) {
         r = xOff;
         theta = pi_4 * (yOff / xOff);
-    }else {
+    }
+    else {
         r = yOff;
         theta = (float)M_PI_2 - pi_4 * (xOff / yOff);
     }
     return Point2f(r * std::cos(theta), r * std::sin(theta));
 }
 
-float Warp::squareToUniformDiskPdf(const Point2f &p) {
+float Warp::squareToUniformDiskPdf(const Point2f& p) {
     return (std::sqrt(p[0] * p[0] + p[1] * p[1]) < 1) ? INV_PI : 0.0f;
 }
 
@@ -72,54 +73,66 @@ Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    return ((p.array() >= 0).all() && (p.array() <= 1).all() && p[0]+p[1] < 1) ? 2.0f : 0.0f;
+    return ((p.array() >= 0).all() && (p.array() <= 1).all() && p[0] + p[1] < 1) ? 2.0f : 0.0f;
 }
+
 
 
 Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
-    float z = 1 - 2 * sample[0];
-    float sz = std::sqrt(1 - z * z);
-    return Vector3f(
-        std::cos(2 * M_PI * sample[1]) * sz,
-        std::sin(2 * M_PI * sample[1]) * sz,
-        z
-    );
+	// x_out = sqrt(1 - z_out^2) * cos( 2 pi  y_in) 
+	// y_out = sqrt(1 -z_out^2) * sin(2 pi y_in)
+	// z_out = 1 - 2 x_in
+	float z = 1 - 2 * sample[0];
+    float r = std::sqrt(std::max((float)0, (float)1 - z * z));
+    float phi = 2 * M_PI * sample[1];
+    return Vector3f(r * std::cos(phi), r * std::sin(phi), z);
+	
+    //throw NoriException("Warp::squareToUniformSphere() is not yet implemented!");
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
-    return (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001) ? INV_FOURPI : 0.0f;
+	float result, r;
+	r = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	if( r >= 1 - 1e-04 && r <= 1 + 1e-04) result = INV_FOURPI;
+	else result = 0;
+    return result;
+	//throw NoriException("Warp::squareToUniformSpherePdf() is not yet implemented!");
 }
 
-Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
+Vector3f Warp::squareToUniformHemisphere(const Point2f& sample) {
     float z = sample[0];
     float r = std::sqrt(std::max((float)0, (float)1. - z * z));
     float phi = 2 * M_PI * sample[1];
     return Vector3f(r * std::cos(phi), r * std::sin(phi), z);
 }
 
-float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
-    return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? INV_TWOPI: 0.0f;
+float Warp::squareToUniformHemispherePdf(const Vector3f& v) {
+    return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? INV_TWOPI : 0.0f;
 }
 
-Vector3f Warp::squareToCosineHemisphere(const Point2f& sample) {
-    float x, y, z;
-    float theta = 2 * M_PI * sample[0];
-    x = std::cos(theta) * std::sqrt(std::max((float)0, (float)sample[1]));
-    y = std::sin(theta) * std::sqrt(std::max((float)0, (float)sample[1]));
-    z = std::sqrt(std::max((float)0, (float)1 - sample[1]));
-    return Vector3f(x, y, z);
+Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
+	float x,y,z;
+	x = std::cos(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+	y = std::sin(2*M_PI * sample[1]) * std::sqrt(std::max((float)0, (float)sample[0]));
+    z = std::sqrt(std::max((float)0, (float)1 - sample[0]));
+	return Vector3f(x,y,z);
+    //throw NoriException("Warp::squareToCosineHemisphere() is not yet implemented!");
 }
 
-float Warp::squareToCosineHemispherePdf(const Vector3f& v) {
-    float prob = v[2] * INV_PI;
-    return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? prob : 0.0f;
+float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
+    float result, r;
+	r = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+	if( r >= 1 - 1e-04 && r <= 1 + 1e-04 && v[2] >= 0 ) result = v[2]/(r*M_PI); // p = cos(theta)/PI 
+	else result = 0;
+    return result;
+	//throw NoriException("Warp::squareToCosineHemispherePdf() is not yet implemented!");
 }
 
-Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
+Vector3f Warp::squareToBeckmann(const Point2f& sample, float alpha) {
     float x, y, z, phi, logSample, cos_theta, sin_theta, tan2theta;
 
     phi = 2 * M_PI * sample[0];
-    logSample = std::log(std::max((float)0, 1-sample[1]));
+    logSample = std::log(std::max((float)0, 1 - sample[1]));
     // logSample can be a number from -inf to 0.
     tan2theta = -alpha * alpha * logSample;
     // tan2theta can be a number from inf to 0.
@@ -132,23 +145,23 @@ Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
     y = sin_theta * std::sin(phi);
     z = cos_theta;
 
-    return Vector3f(x,y,z);
+    return Vector3f(x, y, z);
 }
 
-float Warp::squareToBeckmannPdf(const Vector3f &v, float alpha) {
+float Warp::squareToBeckmannPdf(const Vector3f& v, float alpha) {
     float tan2theta, cos_theta, alpha2, prob, denom;
     alpha2 = alpha * alpha;
     // From z we have cos theta and tan
     cos_theta = v[2];
-   
+
     if (cos_theta == 0) {
         prob = 0;
-    }else {
-        tan2theta = ((float)1. / (cos_theta * cos_theta))-1;
+    }
+    else {
+        tan2theta = ((float)1. / (cos_theta * cos_theta)) - 1;
         denom = M_PI * alpha2 * cos_theta * cos_theta * cos_theta;
         prob = std::exp(-tan2theta / alpha2) / denom;
     }
     return (v[2] >= 0 && (std::abs(std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - 1) < 0.0001)) ? prob : 0.0f;
 }
-
 NORI_NAMESPACE_END

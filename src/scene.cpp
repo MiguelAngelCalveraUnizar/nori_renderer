@@ -78,6 +78,19 @@ float Scene::pdfEmitter(const Emitter *em) const {
     return 1. / float(m_emitters.size());
 }
 
+/*
+const Emitter * Scene::sampleDirect(float rnd, float &pdf) const {
+	auto const & n = m_emitters.size();
+	DiscretePDF discretePdf(n)
+	float totalRadiance = 0;
+	for(unsigned int i=0; i<m_emitters.size(); ++i){
+		totalRadiance += m_emitters[index].m_radiance;
+	}
+	size_t index = std::min(static_cast<size_t>(std::floor(n*rnd)), n - 1);
+	pdf = m_emitters[index].m_radiance / totalRadiance;
+	return m_emitters[index];
+}
+*/
 
 void Scene::addChild(NoriObject *obj, const std::string& name) {
     switch (obj->getClassType()) {

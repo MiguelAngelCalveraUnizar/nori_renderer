@@ -7,11 +7,11 @@ NORI_NAMESPACE_BEGIN
 class DirectMaterialSampling : public Integrator
 {
 public:
-    DirectMaterialSampling(const PropertyList &props)
+    DirectMaterialSampling(const PropertyList& props)
     {
         /* No parameters this time */
     }
-    Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f &ray) const
+    Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const
     {
         Color3f Lo(0.); // Total radiance
         Color3f Le(0.); // From the first intersection (If its emitter only)
@@ -31,24 +31,18 @@ public:
         // Ray from p with wo to see if it intersects in a emitter
         Ray3f next_ray(its.p, its.toWorld(bsdfRecord.wo));
         Intersection it_next;
-        if (scene->rayIntersect(next_ray, it_next)){
+        if (scene->rayIntersect(next_ray, it_next)) {
             // If it intersects with something, then we check if the intersection is in a emitter.
             if (it_next.mesh->isEmitter()) {
-                /*
-                EmitterQueryRecord(const Emitter* emitter,
-        const Point3f& ref, const Point3f& p,
-        const Normal3f& n, const Point2f& uv) : emitter(emitter), ref(ref), p(p), n(n), uv(uv){
-                */
-                //Normal3f n = it_next.toWorld(Normal3f(0,0,1)); // ¿?
-                
                 EmitterQueryRecord queryLight = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
                 Li = it_next.mesh->getEmitter()->eval(queryLight);
                 Li = Li * fr;
             }
-        }else {
+        }
+        else {
             Li = fr * scene->getBackground(next_ray); // For some reason getBackground sometimes gives Nan
         }
-        
+
         // If we intersected at first with an Emitter add the Le from it.
         if (its.mesh->isEmitter()) {
             Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
@@ -63,5 +57,5 @@ public:
         return "Direct Whitted Integrator []";
     }
 };
-NORI_REGISTER_CLASS(DirectMaterialSampling,"direct_mats");
+NORI_REGISTER_CLASS(DirectMaterialSampling, "direct_mats");
 NORI_NAMESPACE_END

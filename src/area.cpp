@@ -1,20 +1,16 @@
 /*
     This file is part of Nori, a simple educational ray tracer
-
     Copyright (c) 2015 by Wenzel Jakob
 	
 	v1 - Dec 01 2020
 	Copyright (c) 2020 by Adrian Jarabo
-
     Nori is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
     as published by the Free Software Foundation.
-
     Nori is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
@@ -65,7 +61,12 @@ public:
 		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 		lRec.dist = (lRec.p - lRec.ref).norm();
 		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
-		lRec.pdf = this->pdf(lRec);
+
+		float prob_s = m_mesh->pdf(lRec.p);
+		float denom = (std::abs(lRec.n.dot(lRec.wi)));
+		float norm = lRec.dist;
+		lRec.pdf = prob_s * norm * norm/ denom;
+
 		return eval(lRec);
 	}
 
@@ -77,10 +78,7 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		// TODO:
-		float prob_s = m_mesh->pdf(lRec.p);
-		float denom = (std::abs(lRec.n.dot(lRec.wi)));
-		float norm = lRec.dist;
-		return prob_s * norm * norm / denom;
+		return lRec.pdf;
 	}
 
 

@@ -93,7 +93,7 @@ public:
 		lRec.wi = (sampledPointSphere - lRec.ref) / (sampledPointSphere - lRec.ref).norm();
 		
 		lRec.pdf = Warp::squareToUniformSpherePdf(spherePoint);
-		return eval(lRec); //* m_radiance;
+		return eval(lRec); //* m_radiance (if we want to get the same result than in the example)
 		//return m_radiance * INV_FOURPI;
 	}
 

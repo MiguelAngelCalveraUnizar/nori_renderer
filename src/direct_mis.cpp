@@ -7,29 +7,29 @@ NORI_NAMESPACE_BEGIN
 class DirectMIS : public Integrator
 {
 public:
-	DirectMIS(const PropertyList& props)
-	{
-		/* No parameters this time */
-	}
-	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const
-	{
+    DirectMIS(const PropertyList& props)
+    {
+        /* No parameters this time */
+    }
+    Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const
+    {
 		Color3f Lo(0.); // Total radiance
-		Color3f Le(0.); // From the first intersection (If its emitter only)
-		Color3f Li_mats(0.); // From the material sampling
+        Color3f Le(0.); // From the first intersection (If its emitter only)
+        Color3f Li_mats(0.); // From the material sampling
 		Color3f Li_ems(0.); // From the emmiter sampling
-
+		
 		// Find the surface that is visible in the requested direction
-		Intersection its;
-		if (!scene->rayIntersect(ray, its)) {
-			return scene->getBackground(ray);
-		}
-
+        Intersection its;
+        if (!scene->rayIntersect(ray, its)) {
+            return scene->getBackground(ray);
+        }
+		
 		//**********************************************************
 		//Check if the intersected mesh is an emitter and compute Le
 		//**********************************************************
 		if (its.mesh->isEmitter())
 			Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
-
+		
 		//***************//
 		//Sample emmiter//
 		//**************//
@@ -60,17 +60,14 @@ public:
 			float pdf_light_point = light->pdf(emitterRecordEms);
 
 			//Compute the p_em(sample ems) and p_mat(sample ems)
-			float p_em_wem = pdf_light_point * pdf_light;
-
-			// Get now p_mats_wem
-			BSDFQueryRecord bsdfRecordEmitter(its.toLocal(-ray.d), emitterRecordEms.wi, its.uv, ESolidAngle);
-			// BSDFQueryRecord(wi, wo, uv, measure)
-
-
-			float p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEmitter);
+			p_em_wem = pdf_light_point * pdf_light;
+			p_mat_wem = p_em_wem * emitterRecordEms.dist * emitterRecordEms.dist / abs(Frame::cosTheta(emitterRecordEms.wi) * emitterRecordEms.n.dot(emitterRecordEms.wi));
 			//Accumulate the sample
-			Li_ems *= (its.mesh->getBSDF()->eval(bsdfRecordEms) *
+			Li_ems *=  (its.mesh->getBSDF()->eval(bsdfRecordEms) *
 				its.shFrame.n.dot(emitterRecordEms.wi)) / p_em_wem;
+
+
+			
 		}
 
 		//***************//
@@ -78,49 +75,44 @@ public:
 		//**************//
 		BSDFQueryRecord bsdfRecordMat(its.toLocal(-ray.d), its.uv);
 
-		// We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
-		Color3f fr = its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
+        // We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
+        Color3f fr = its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
 		//Compute the p_mat(sample mats)
 		p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
-		// Already in angular
-		// Ray from p with wo to see if it intersects in a emitter
-		Ray3f next_ray(its.p, its.toWorld(bsdfRecordMat.wo));
-		Intersection it_next;
-		if (scene->rayIntersect(next_ray, it_next)) {
-			// If it intersects with something, then we check if the intersection is in a emitter.
-			if (it_next.mesh->isEmitter()) {
-				EmitterQueryRecord emitterRecordMat = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
-				Li_mats = it_next.mesh->getEmitter()->eval(emitterRecordMat);
-				Li_mats = Li_mats * fr;
-
-				// Get p_em_wmat
-				float p_em_wmat_area = it_next.mesh->getEmitter()->pdf(emitterRecordMat);
-				p_em_wmat = p_em_wmat_area;
-			}
-		}
-		else {
-			Li_mats = fr * scene->getBackground(next_ray); // For some reason getBackground sometimes gives Nan
-			// Add p later.
-		}
-
+        // Ray from p with wo to see if it intersects in a emitter
+        Ray3f next_ray(its.p, its.toWorld(bsdfRecordMat.wo));
+        Intersection it_next;
+        if (scene->rayIntersect(next_ray, it_next)){
+            // If it intersects with something, then we check if the intersection is in a emitter.
+            if (it_next.mesh->isEmitter()) {
+                EmitterQueryRecord emitterRecordMat = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
+                Li_mats = it_next.mesh->getEmitter()->eval(emitterRecordMat);
+                Li_mats = Li_mats * fr;
+				p_em_wmat = p_mat_wmat * abs(Frame::cosTheta(emitterRecordMat.wi) * emitterRecordMat.n.dot(emitterRecordMat.wi))/ (emitterRecordMat.dist * emitterRecordMat.dist);
+            }
+        }
+        else{
+            Li_mats = fr * scene->getBackground(next_ray); // For some reason getBackground sometimes gives Nan
+        }
+	
 		//***************************
 		//Compute the  result of  MIS
 		//***************************
 
 		//Compute the weights
 		float w_em = (p_em_wem + p_mat_wem) > FLT_EPSILON ? p_em_wem / (p_em_wem + p_mat_wem) : 0;
-		float w_mat = (p_em_wmat + p_mat_wmat) > FLT_EPSILON ? p_mat_wmat / (p_em_wmat + p_mat_wmat) : 0;
+		float w_mat = (p_em_wmat + p_mat_wmat) > FLT_EPSILON ?  p_mat_wmat / (p_em_wmat + p_mat_wmat) : 0;
 
 		Lo = Le + Li_ems * w_em + Li_mats * w_mat;
-
+		
 		return Lo;
 	}
-
-
+	
+	
 	std::string toString() const {
 		return "Multiple Importance Sampling []";
 	}
-
+	
 };
 NORI_REGISTER_CLASS(DirectMIS, "direct_mis");
 NORI_NAMESPACE_END
