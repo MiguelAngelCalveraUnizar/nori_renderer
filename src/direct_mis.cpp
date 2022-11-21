@@ -33,7 +33,11 @@ public:
 		//***************//
 		//Sample emmiter//
 		//**************//
-		float pdf_light;
+		float pdf_light = 0;
+		float p_em_wem = 0;
+		float p_mat_wem = 0;
+		float p_mat_wmat = 0;
+		float p_em_wmat = 0;
 		const Emitter* light = scene->sampleEmitter(sampler->next1D(), pdf_light); 	//const Emitter *sampleEmitter(float rnd, float &pdf) const;
 		//Sample a point from the light
 		EmitterQueryRecord emitterRecordEms(its.p);
@@ -55,8 +59,9 @@ public:
 			//Probability of the sample of the point of the light source
 			float pdf_light_point = light->pdf(emitterRecordEms);
 
-			//Compute the p_em(sample ems)
-			float p_em_wem = pdf_light_point * pdf_light;
+			//Compute the p_em(sample ems) and p_mat(sample ems)
+			p_em_wem = pdf_light_point * pdf_light;
+			p_mat_wem = p_em_wem * emitterRecordEms.dist * emitterRecordEms.dist / abs(Frame::cosTheta(emitterRecordEms.wi) * emitterRecordEms.n.dot(emitterRecordEms.wi));
 			//Accumulate the sample
 			Li_ems *=  (its.mesh->getBSDF()->eval(bsdfRecordEms) *
 				its.shFrame.n.dot(emitterRecordEms.wi)) / p_em_wem;
@@ -73,7 +78,7 @@ public:
         // We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
         Color3f fr = its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
 		//Compute the p_mat(sample mats)
-		float p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
+		p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
         // Ray from p with wo to see if it intersects in a emitter
         Ray3f next_ray(its.p, its.toWorld(bsdfRecordMat.wo));
         Intersection it_next;
@@ -83,6 +88,7 @@ public:
                 EmitterQueryRecord emitterRecordMat = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
                 Li_mats = it_next.mesh->getEmitter()->eval(emitterRecordMat);
                 Li_mats = Li_mats * fr;
+				p_em_wmat = p_mat_wmat * abs(Frame::cosTheta(emitterRecordMat.wi) * emitterRecordMat.n.dot(emitterRecordMat.wi))/ (emitterRecordMat.dist * emitterRecordMat.dist);
             }
         }
         else{
@@ -92,7 +98,12 @@ public:
 		//***************************
 		//Compute the  result of  MIS
 		//***************************
-		Lo = Le + Li_ems + Li_mats;
+
+		//Compute the weights
+		float w_em = (p_em_wem + p_em_wmat) > FLT_EPSILON ? p_em_wem / (p_em_wem + p_em_wmat) : 0;
+		float w_mat = (p_mat_wem + p_mat_wmat) > FLT_EPSILON ?  p_mat_wmat / (p_mat_wem + p_mat_wmat) : 0;
+
+		Lo = Le + Li_ems * w_em + Li_mats * w_mat;
 		
 		return Lo;
 	}
