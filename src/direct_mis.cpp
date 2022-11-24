@@ -61,13 +61,12 @@ public:
 
 			//Compute the p_em(sample ems) and p_mat(sample ems)
 			p_em_wem = pdf_light_point * pdf_light;
-			p_mat_wem = p_em_wem * emitterRecordEms.dist * emitterRecordEms.dist / abs(Frame::cosTheta(emitterRecordEms.wi) * emitterRecordEms.n.dot(emitterRecordEms.wi));
+			//p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEms);
+			p_mat_wem = p_em_wem
+			*abs(Frame::cosTheta(emitterRecordEms.wi) * emitterRecordEms.n.dot(emitterRecordEms.wi)) / (emitterRecordEms.dist * emitterRecordEms.dist);
 			//Accumulate the sample
 			Li_ems *=  (its.mesh->getBSDF()->eval(bsdfRecordEms) *
 				its.shFrame.n.dot(emitterRecordEms.wi)) / p_em_wem;
-
-
-			
 		}
 
 		//***************//
@@ -88,8 +87,9 @@ public:
                 EmitterQueryRecord emitterRecordMat = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
                 Li_mats = it_next.mesh->getEmitter()->eval(emitterRecordMat);
                 Li_mats = Li_mats * fr;
-				p_em_wmat = p_mat_wmat * abs(Frame::cosTheta(emitterRecordMat.wi) * emitterRecordMat.n.dot(emitterRecordMat.wi))/ (emitterRecordMat.dist * emitterRecordMat.dist);
-            }
+				//p_em_wmat = it_next.mesh->getEmitter()->pdf(emitterRecordMat) * scene->pdfEmitter(it_next.mesh->getEmitter());
+				p_em_wmat = p_mat_wmat * emitterRecordMat.dist * emitterRecordMat.dist / abs(Frame::cosTheta(emitterRecordMat.wi) * emitterRecordMat.n.dot(emitterRecordMat.wi));
+			}
         }
         else{
             Li_mats = fr * scene->getBackground(next_ray); // For some reason getBackground sometimes gives Nan

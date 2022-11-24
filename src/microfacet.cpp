@@ -355,7 +355,8 @@ public:
         //Shortcuts
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float alpha = m_alpha->eval(bRec.uv).mean();
-        float p_RR;
+        float pdf_RR;
+        Color3f brdf_RR;
         bRec.measure = ESolidAngle;
         //std::cout << "Sample computed" << endl;
 
@@ -364,16 +365,24 @@ public:
 
         //Compute the Fresnell term
         float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
-
+        float randomNumber = rand() / float(RAND_MAX);
         //Russian Roulette 
-        if (rand() < F) { //Microfacet
+        if (randomNumber < F) { //Microfacet
             //Sample the half vector
 
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
             //bRec.wo = Reflectance::refract(bRec.wi, wh, m_extIOR, m_intIOR);
             bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
             bRec.wo.normalize();
-            p_RR = F * Warp::squareToBeckmannPdf(wh, alpha);
+            pdf_RR = F * Warp::squareToBeckmannPdf(wh, alpha);
+            /*
+            float cosThetaO = Frame::cosTheta(bRec.wo);
+            brdf_RR = (Reflectance::BeckmannNDF(wh, alpha) *
+                Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR) *
+                Reflectance::G1(bRec.wi, wh, alpha) *
+                Reflectance::G1(bRec.wo, wh, alpha)) /
+                (4 * cosThetaI * cosThetaO);
+            */
 
         }
         else { //Diffuse
@@ -381,10 +390,19 @@ public:
             //Sample wo
             bRec.wo = Warp::squareToCosineHemisphere(_sample);
             //Vector3f wh = (bRec.wo + bRec.wi).normalized();
-            p_RR = (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+            pdf_RR = (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+            float cosThetaO = Frame::cosTheta(bRec.wo);
+            /*
+            brdf_RR = ((28 * m_kd->eval(bRec.uv)) / (23 * M_PI)) *
+                (1 - (((m_extIOR - m_intIOR) * (m_extIOR - m_intIOR)) / ((m_extIOR + m_intIOR) * (m_extIOR + m_intIOR)))) *
+                (1 - pow((1 - 0.5 * cosThetaI), 5)) *
+                (1 - pow((1 - 0.5 * cosThetaO), 5));
+            */
+
+
         }
 
-        float pdf_total = p_RR;
+        //float pdf_total = p_RR;
         //float pdf_total = pdf(bRec); //Both ways should be equivalent
 
         return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
