@@ -70,12 +70,12 @@ void Scene::activate() {
 const Emitter * Scene::sampleEmitter(float rnd, float &pdf) const {
 	auto const & n = m_emitters.size();
 	size_t index = std::min(static_cast<size_t>(std::floor(n*rnd)), n - 1);
-	pdf = 1. / float(n);
+	pdf = (float)1. / float(n);
 	return m_emitters[index];
 }
 
 float Scene::pdfEmitter(const Emitter *em) const {
-    return 1. / float(m_emitters.size());
+    return (float)1. / (float)(m_emitters.size());
 }
 
 
@@ -129,8 +129,10 @@ Color3f Scene::getBackground(const Ray3f& ray) const
 {
     if (!m_enviromentalEmitter)
         return Color3f(0);
-
     EmitterQueryRecord lRec(m_enviromentalEmitter, ray.o, ray.o + ray.d, Normal3f(0, 0, 1), Vector2f());
+    // Here lRec has a wi nan, why?
+    if (isnan((ray.o+ray.d).mean()))
+        cout << "Ups, ray nan";
 	return m_enviromentalEmitter->eval(lRec);
 }
 

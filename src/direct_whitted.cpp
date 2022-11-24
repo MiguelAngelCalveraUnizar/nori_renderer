@@ -18,7 +18,6 @@ public:
         Intersection its;
         if (!scene->rayIntersect(ray, its))
             return scene-> getBackground(ray);
-        float pdflight;
         EmitterQueryRecord emitterRecord(its.p);
         // Get all lights in the scene
         const std::vector<Emitter*> lights = scene-> getLights();

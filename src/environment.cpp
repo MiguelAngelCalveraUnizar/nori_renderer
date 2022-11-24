@@ -27,8 +27,8 @@ public:
 		m_type = EmitterType::EMITTER_ENVIRONMENT;
 		m_environment = 0;
 
-		std::string m_environment_name = props.getString("filename", "null");
-
+		//std::string m_environment_name = props.getString("filename", "null");
+		m_environment_name = props.getString("filename", "null");
 		filesystem::path filename =
 			getFileResolver()->resolve(m_environment_name);
 
@@ -66,8 +66,9 @@ public:
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
 		if (!m_environment)
 			return m_radiance;
-
+		// Here wi sometimes is nan for some reason.
 		float phi = atan2(lRec.wi[2], lRec.wi[0]);
+		
 		float theta = acos(lRec.wi[1]);
 		if (phi < 0) phi += 2 * M_PI;
 
@@ -75,26 +76,24 @@ public:
 		float y = (theta) / M_PI;
 
 
-		return m_environment->eval(Point2f(x, y))* m_radiance;
+		return m_environment->eval(Point2f(x, y)) * m_radiance;
 	}
 
 	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
 		//Generar sample en cuadrado unitario
 		//Mapear el sample a la esfera
 		//Obtener la direccion que une el centro de la esfera y su punto 3D sampleado
-		//Para obtener la direcciÃ³n, pasar el vector obtenido a coordenadas del mundo?
+		//Para obtener la dirección, pasar el vector obtenido a coordenadas del mundo?
 
 		//Sample the point
-		Vector3f spherePoint = Warp::squareToUniformSphere(sample); //Transform to world coord.?
-		//lRec.p = Point3f(spherePoint[0], spherePoint[1], spherePoint[2]);
+		Vector3f spherePoint = Warp::squareToUniformSphere(sample);
 		Point3f sampledPointSphere = Point3f(spherePoint[0], spherePoint[1], spherePoint[2]);
 		lRec.p = Point3f(1, 1, 1) * INFINITY;
 		lRec.dist = INFINITY;
 		lRec.wi = (sampledPointSphere - lRec.ref) / (sampledPointSphere - lRec.ref).norm();
-		
+
 		lRec.pdf = Warp::squareToUniformSpherePdf(spherePoint);
-		return eval(lRec); //* m_radiance;
-		//return m_radiance * INV_FOURPI;
+		return eval(lRec) ;//* m_radiance
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -113,7 +112,7 @@ public:
 
 protected:
 	Color3f m_radiance;
-	Bitmap *m_environment;
+	Bitmap* m_environment;
 	std::string m_environment_name;
 };
 

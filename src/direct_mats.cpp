@@ -27,20 +27,13 @@ public:
         // We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
         Color3f fr = its.mesh->getBSDF()->sample(bsdfRecord, sampler->next2D());
 
-        // bsdfRecord.measure = ESolidAngle;
         // Ray from p with wo to see if it intersects in a emitter
         Ray3f next_ray(its.p, its.toWorld(bsdfRecord.wo));
         Intersection it_next;
         if (scene->rayIntersect(next_ray, it_next)){
             // If it intersects with something, then we check if the intersection is in a emitter.
             if (it_next.mesh->isEmitter()) {
-                /*
-                EmitterQueryRecord(const Emitter* emitter,
-        const Point3f& ref, const Point3f& p,
-        const Normal3f& n, const Point2f& uv) : emitter(emitter), ref(ref), p(p), n(n), uv(uv){
-                */
-                //Normal3f n = it_next.toWorld(Normal3f(0,0,1)); // ¿?
-                
+                // Emitter record -> emitter, ref, p, n, uv (inside calculates wi)
                 EmitterQueryRecord queryLight = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
                 Li = it_next.mesh->getEmitter()->eval(queryLight);
                 Li = Li * fr;
@@ -51,7 +44,7 @@ public:
         
         // If we intersected at first with an Emitter add the Le from it.
         if (its.mesh->isEmitter()) {
-            Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(ray.o));
+            Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(its.mesh->getEmitter(),ray.o, its.p, its.shFrame.n, its.uv));
         }
 
         // Sum all

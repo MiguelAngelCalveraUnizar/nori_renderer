@@ -51,51 +51,49 @@ public:
 				isEmmiterVisible = false;
 			}
 		}
+
+		//BSDF 
+		BSDFQueryRecord bsdfRecordEms(its.toLocal(-ray.d),
+			its.toLocal(emitterRecordEms.wi), its.uv, ESolidAngle);
+		
 		if (isEmmiterVisible) {
-			//BSDF 
-			BSDFQueryRecord bsdfRecordEms(its.toLocal(-ray.d),
-				its.toLocal(emitterRecordEms.wi), its.uv, ESolidAngle);
+			
 
 			//Probability of the sample of the point of the light source
 			float pdf_light_point = light->pdf(emitterRecordEms);
 
 			//Compute the p_em(sample ems) and p_mat(sample ems)
-			float p_em_wem = pdf_light_point * pdf_light;
-
-			// Get now p_mats_wem
-			BSDFQueryRecord bsdfRecordEmitter(its.toLocal(-ray.d), emitterRecordEms.wi, its.uv, ESolidAngle);
-			// BSDFQueryRecord(wi, wo, uv, measure)
-
-
-			float p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEmitter);
+			p_em_wem = pdf_light_point * pdf_light;
+			// For MSI we need to evaluate respect to p_mat_wem the pdf of the direction
+			p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEms);
 			//Accumulate the sample
 			Li_ems *= (its.mesh->getBSDF()->eval(bsdfRecordEms) *
 				its.shFrame.n.dot(emitterRecordEms.wi)) / p_em_wem;
 		}
 
+		
+
 		//***************//
 		//Sample material//
 		//**************//
 		BSDFQueryRecord bsdfRecordMat(its.toLocal(-ray.d), its.uv);
-
 		// We sample a direction wo with probability proportional to the BSDF. Then we get the fr*cos/p_omega            
 		Color3f fr = its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
-		//Compute the p_mat(sample mats)
-		p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
-		// Already in angular
+		
 		// Ray from p with wo to see if it intersects in a emitter
 		Ray3f next_ray(its.p, its.toWorld(bsdfRecordMat.wo));
 		Intersection it_next;
 		if (scene->rayIntersect(next_ray, it_next)) {
 			// If it intersects with something, then we check if the intersection is in a emitter.
 			if (it_next.mesh->isEmitter()) {
-				EmitterQueryRecord emitterRecordMat = EmitterQueryRecord(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
+				EmitterQueryRecord emitterRecordMat(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
 				Li_mats = it_next.mesh->getEmitter()->eval(emitterRecordMat);
 				Li_mats = Li_mats * fr;
 
 				// Get p_em_wmat
-				float p_em_wmat_area = it_next.mesh->getEmitter()->pdf(emitterRecordMat);
-				p_em_wmat = p_em_wmat_area;
+				p_em_wmat = it_next.mesh->getEmitter()->pdf(emitterRecordMat);
+				//Compute the p_mat(sample mats)
+				p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
 			}
 		}
 		else {

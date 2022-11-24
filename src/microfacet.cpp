@@ -76,7 +76,7 @@ public:
 
         float alpha = m_alpha->eval(bRec.uv).mean();
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
-        return Warp::squareToBeckmannPdf(wh, alpha);
+        return Warp::squareToBeckmannPdf(wh, alpha); //
     }
 
     /// Sample the BRDF
@@ -279,7 +279,7 @@ public:
 
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float cosThetaO = Frame::cosTheta(bRec.wo);
-
+        
 
         if (bRec.measure != ESolidAngle
             || cosThetaI <= 0
@@ -297,18 +297,16 @@ public:
 
 
         // Reflection at the interface term
-        Vector3f wh = (bRec.wi + bRec.wo) / (bRec.wo + bRec.wi).norm();
-        //float alpha = m_alpha->eval(bRec.uv).getLuminance();
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
         float alpha = m_alpha->eval(bRec.uv).mean();
         f_mf = (Reflectance::BeckmannNDF(wh, alpha) *
-            Reflectance::fresnel(bRec.wo.dot(wh), m_extIOR, m_intIOR) *
+            Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR) *
             Reflectance::G1(bRec.wi, wh, alpha) *
             Reflectance::G1(bRec.wo, wh, alpha)) /
             (4 * cosThetaI * cosThetaO);
 
-        float F = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-
-        return  Color3f(F* f_mf + (1-F)*f_diff);
+        return  Color3f(f_mf + f_diff);
     }
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -326,7 +324,10 @@ public:
             return 0.0f;
 
         float F = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
-        return F * Warp::squareToBeckmannPdf(wh, alpha) + (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
+
+        float Beckman_pdf = Warp::squareToBeckmannPdf(wh, alpha);// ;///  
+
+        return F * Beckman_pdf + (1 - F) * Warp::squareToCosineHemispherePdf(bRec.wo);
     }
 
     /// Sample the BRDF
@@ -345,27 +346,24 @@ public:
 
         if (cosThetaI <= 0)
             return Color3f(0.0f);
-
+        Point2f sample = _sample;
         //Compute the Fresnell term
         float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
-
         //Russian Roulette 
-        if (F < rand()) {
+        float rnd = (float)rand() / RAND_MAX;
+        if ( rnd < F) {
+            //Diffusion
             //Sample the half vector
-
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
             bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
             bRec.wo.normalize();
         }
         else {
+            // Microfacet:
             bRec.wo = Warp::squareToCosineHemisphere(_sample);
         }
 
-        float pdf_total = pdf(bRec);
-        if (pdf_total < FLT_EPSILON) {
-            return Color3f(0);
-        }
-        return eval(bRec) * Frame::cosTheta(bRec.wo) / (pdf(bRec));
+        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
     }
 
     bool isDiffuse() const {
