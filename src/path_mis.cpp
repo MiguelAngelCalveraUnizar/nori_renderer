@@ -154,6 +154,17 @@ public:
             // not continuing with probability of sample() accumulated
             float rnd = (float)rand() / RAND_MAX;
             keepTracing = keepTracing && (rnd < rr_limit || n_bounces < 3); //90% of continuing.
+            if (n_bounces >= 3) {
+                if (keepTracing) {
+                    // Then we continue with probability:
+                    fr /= rr_limit;
+                }
+                else {
+                    // We don't continue with probability:
+                    fr /= (1 - rr_limit);
+                }
+            }
+
             n_bounces += 1;
         }
         return Lo;
