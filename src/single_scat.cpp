@@ -13,20 +13,25 @@ class SingleScat : public Integrator
 public:
     SingleScat(const PropertyList& props)
     {
-        //mu_a = 0.1f;
-        //mu_s = 0.6f;
-        //mu_t = mu_a + mu_t;
+
     }
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const
     {
         Color3f Lo(0.); // Total radiance
+        Color3f Ld(0.); // Direct Light to a point.
         Color3f Le(0.); // Emitter radiance
 
         // Boundary of the medium
         Intersection its;
         if (!scene->rayIntersect(ray, its)) {
+            // This is incorrect, the background is also affected by transmittance and everything
             return scene->getBackground(ray);
         }
+        // Get value of the emmiter if it is one.
+        if (its.mesh->isEmitter()) {
+            Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(its.mesh->getEmitter(), ray.o, its.p, its.shFrame.n, its.uv));
+        }
+
         // Imagine for some reason we get a participating media through the intersection
         // Then we will have access to the mu_t inside, so we can pass it to Transmittance
         Point3f xz = its.p;
@@ -36,10 +41,10 @@ public:
         MediumIntersection medIts;
         medIts.medium = scene->getMedium();
         scene->getMedium()->sampleBetween(x, xz, sampler->next1D(), medIts);
-        Le = medIts.medium->Transmittance(x, xz) * DirectLight(scene, sampler, its, medIts, ray);
+        Ld = medIts.medium->Transmittance(x, xz) * DirectLight(scene, sampler, its, medIts, ray);
 
         // Inscattering
-        Lo = Le + medIts.medium->Transmittance(x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
+        Lo = Le + Ld + medIts.medium->Transmittance(x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
        
         return Lo;
     }
@@ -243,10 +248,6 @@ public:
         return "Single Scattering Integrator []";
     }
 
-    //// This shouldn't be here but whatever
-    //float mu_t;
-    //float mu_a;
-    //float mu_s;
 };
 NORI_REGISTER_CLASS(SingleScat,"single_scat");
 NORI_NAMESPACE_END
