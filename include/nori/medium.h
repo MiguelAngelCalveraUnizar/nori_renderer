@@ -90,7 +90,7 @@ public:
     std::string toString() const;
 
     /// For homogeneus and heterogeneus media to define correctly
-    const Color3f Transmittance(Point3f x, Point3f xz) const { return Color3f(1); }
+    const float Transmittance(Point3f x, Point3f xz) const { return 1.0f; }
 
     const float getScatteringCoeficient() const { return 1; }
 
