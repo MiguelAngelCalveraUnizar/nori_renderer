@@ -67,6 +67,9 @@ add_executable(nori
   include/nori/transform.h
   include/nori/vector.h
   include/nori/warp.h
+  include/nori/medium.h
+  include/nori/pf.h
+  
 
   # Source code files
   src/accel.cpp
@@ -100,6 +103,13 @@ add_executable(nori
   src/direct_ems.cpp
   src/direct_mats.cpp
   src/direct_mis.cpp
+  src/path.cpp
+  src/path_nee.cpp
+  src/path_mis.cpp
+  src/pf_fog.cpp
+  src/medium.cpp
+  src/single_scat.cpp
+  src/homogeneous.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
