@@ -18,9 +18,11 @@ Una vez añadido soporte para cargar archivos .vol con densidad de particulas y 
     - Implementarlo
 - Determinar Phase Funcion (similar a pf_fog.cpp, pero con microflake.cpp)
     - Investigar cual es la de microflake
+    - Creo que la phase Function del microflake se determina mediante D(w) que es sin20(v, ω), pero no se como va.
     - Implementar
 - Determinar Transmittance a partir de datos de .vol (heterogeneus.cpp)
 - Determinar Absortion coeficient a partir de datos de .vol (heterogeneus.cpp)
 - Determinar Scattering coeficient a partir de datos de .vol (heterogeneus.cpp)
-
+- Determinar Transmittance coefficient a partir de datos de .vol (heterogeneus.cpp)
+    - Segun el paper utilizan "ray marching" para obtener simga_t: Pag 10 [A radiative transfer framework for rendering materials with anisotropic structure] 
 
