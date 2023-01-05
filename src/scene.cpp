@@ -25,6 +25,8 @@
 #include <nori/sampler.h>
 #include <nori/camera.h>
 #include <nori/emitter.h>
+//  Because we have a medium inside here
+#include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -38,6 +40,7 @@ Scene::~Scene() {
     delete m_sampler;
     delete m_camera;
     delete m_integrator;
+    delete m_medium;
 }
 
 void Scene::activate() {
@@ -88,6 +91,14 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
             }
             break;
         
+        case EMedium: {
+            std::cout << " Medium Aded as child to scene\n";
+            if (m_medium)
+                throw NoriException("There can only be one medium per scene!");
+            m_medium = static_cast<Medium*>(obj);
+        }
+            break;
+
         case EEmitter: {
 				Emitter *emitter = static_cast<Emitter *>(obj);
 				if (emitter->getEmitterType() == EmitterType::EMITTER_ENVIRONMENT)

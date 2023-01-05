@@ -174,13 +174,13 @@ float Mesh::pdf(const Point3f &p) const
 
 void Mesh::addChild(NoriObject *obj, const std::string& name) {
     switch (obj->getClassType()) {
-        case EBSDF:
+        case EBSDF: {
             if (m_bsdf)
                 throw NoriException(
                     "Mesh: tried to register multiple BSDF instances!");
             m_bsdf = static_cast<BSDF *>(obj);
             break;
-
+        }
         case EEmitter: {
                 Emitter *emitter = static_cast<Emitter *>(obj);
                 if (m_emitter)
@@ -189,7 +189,6 @@ void Mesh::addChild(NoriObject *obj, const std::string& name) {
                 m_emitter = emitter;
             }
             break;
-
         default:
             throw NoriException("Mesh::addChild(<%s>) is not supported!",
                                 classTypeName(obj->getClassType()));

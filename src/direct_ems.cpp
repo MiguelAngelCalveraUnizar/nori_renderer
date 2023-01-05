@@ -23,7 +23,7 @@ protected:
 
 		//Sample randomly a light source
 		float pdf_light;
-		const Emitter* light = scene->sampleEmitter(sampler->next1D(), pdf_light); 	//const Emitter *sampleEmitter(float rnd, float &pdf) const;
+		const Emitter* light = scene->sampleEmitter(sampler->next1D(), pdf_light);
 		//Sample the light
 		EmitterQueryRecord emitterRecord(its.p);
 		Color3f Li = light->sample(emitterRecord, sampler->next2D(), 0.);

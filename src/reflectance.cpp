@@ -90,15 +90,15 @@ Color3f Reflectance::fresnel(float cosThetaI, const Color3f &R0)
 
 float Reflectance::G1(const Vector3f& wv, const Vector3f &wh, float alpha)
 {
-    float b = 1. / (alpha * sqrt(1 - wv[2] * wv[2]) / wv[2]);
+    float b = 1.f / (alpha * sqrt(1 - wv[2] * wv[2]) / wv[2]);
 
     if (wv.dot(wh) / wv[2] <= 0)
         return 0;
 
-    if (b < 1.6)
-        return (3.535 * b + 2.181 * b * b) / (1 + 2.276 * b + 2.577 * b * b);
+    if (b < 1.6f)
+        return (3.535f * b + 2.181f * b * b) / (1 + 2.276f * b + 2.577f * b * b);
     else
-        return 1;
+        return 1.f;
 }
 
 float Reflectance::BeckmannNDF(const Vector3f& wh, float alpha)

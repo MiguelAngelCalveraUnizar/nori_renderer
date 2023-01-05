@@ -298,7 +298,7 @@ public:
 
         // Reflection at the interface term
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
-        float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
+        //float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
         float alpha = m_alpha->eval(bRec.uv).mean();
         f_mf = (Reflectance::BeckmannNDF(wh, alpha) *
             Reflectance::fresnel(bRec.wi.dot(wh), m_extIOR, m_intIOR) *
