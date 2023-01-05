@@ -69,9 +69,9 @@
 	</mesh>
 
 	<medium type="homogeneous">
+		<float name="mu_s" value="0.2"/>
+		<float name="mu_a" value="0.1"/>
 		<phase type="pf_fog">
-			<float name="mu_s" value="0.1"/>
-			<float name="mu_a" value="0.6"/>
 		</phase>
 	</medium>
 
