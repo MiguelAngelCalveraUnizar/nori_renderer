@@ -25,17 +25,6 @@ void Medium::activate() {
     }
 }
 
-const bool Medium::sampleBetween(Point3f x, Point3f xz, float rnd, MediumIntersection &medIts) const {
-    //Return if the medium is in between x and xz or not. If there's not, then there's no use in doing this.
-    medIts.xz = xz;
-    medIts.o = x;
-    medIts.xt = x + rnd * (xz - x);
-    medIts.pdf_xt = 1 / ((xz - x).norm());
-    // This frame will be different for heterogeneus media or media where the phase function has orientation.
-    medIts.shFrame = Frame(Vector3f(1, 0, 0));
-    return true;
-}
-
 
 void Medium::addChild(NoriObject *obj, const std::string& name) {
     switch (obj->getClassType()) {

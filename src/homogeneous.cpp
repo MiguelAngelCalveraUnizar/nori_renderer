@@ -27,6 +27,20 @@ public:
         return mu_s;
     }
 
+    const bool sampleBetween(Point3f x, Point3f xz, float rnd, MediumIntersection& medIts) const {
+        //Return if the medium is in between x and xz or not. If there's not, then there's no use in doing this.
+        medIts.xz = xz;
+        medIts.o = x;
+        // This frame will be different for heterogeneus media or media where the phase function has orientation.
+        medIts.shFrame = Frame(Vector3f(1, 0, 0));
+        
+        float t = log(rnd) / mu_t;
+        medIts.pdf_xt = mu_t * exp(-mu_t * t);
+        medIts.xt = x + t * (xz - x);
+        return true;
+    }
+
+
 protected:
     float mu_a;
     float mu_s;
