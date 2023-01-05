@@ -4,6 +4,7 @@ Nori based renderer as part of MSoA course
 This version includes part of the project to do a scarf as a heterogeneus anisotropic participating media
 
 Lista de cosas por hacer:
+- Single Scattering añadir comprobaciones NaN en todas las divisiones por probabilidades o todas las operaciones
 - Hacer un Volumetric Path Integrator. La base será single_scat, pero tendra un efecto recursivo y Russian Roulette para terminar de ejecutarlo
 - Añadir un archivo heterogeneus.cpp similar a homogeneus.cpp
 - Añadir un archivo que se encargue de leer un .vol que contiene densidad de particulas y orientacion
