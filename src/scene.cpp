@@ -55,8 +55,10 @@ void Scene::activate() {
 
     m_accel->build();
     std::cout << "Accel Medium adding the medium bounding box \n";
-    if (m_medium->getBoundingBoxAsMesh()) {
-        m_accel_medium->addMesh(m_medium->getBoundingBoxAsMesh());
+    if (m_medium) {
+        if (m_medium->getBoundingBoxAsMesh()) {
+            m_accel_medium->addMesh(m_medium->getBoundingBoxAsMesh());
+        }
     }
     m_accel_medium->build();
     std::cout << "Finished Accel Medium building \n";
