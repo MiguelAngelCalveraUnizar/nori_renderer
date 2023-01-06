@@ -10,13 +10,13 @@ Lista de cosas por hacer:
 
 Una vez añadido soporte para cargar archivos .vol con densidad de particulas y orientación
 - Funcion de sampleo (como sampleBetween), que tiene que escoger el punto segun la densidad de particulas. (heterogeneus.cpp)
-    - Investigar que tipo de sampleo hace falta
+    - Investigar que tipo de sampleo hace falta.
     - Implementarlo
 - Determinar Phase Funcion (similar a pf_fog.cpp, pero con microflake.cpp)
     - Investigar cual es la de microflake
     - Creo que la phase Function del microflake se determina mediante D(w) que es sin20(v, ω), pero no se como va.
     - Implementar
-- Determinar Transmittance a partir de datos de .vol (heterogeneus.cpp)
+- Determinar Transmittance a partir de datos de .vol (heterogeneus.cpp) (Woodcock supongo)
 - Determinar Absortion coeficient a partir de datos de .vol (heterogeneus.cpp)
 - Determinar Scattering coeficient a partir de datos de .vol (heterogeneus.cpp)
 - Determinar Transmittance coefficient a partir de datos de .vol (heterogeneus.cpp)
