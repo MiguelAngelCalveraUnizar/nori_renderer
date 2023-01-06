@@ -99,17 +99,51 @@ public:
         return m_accel->rayIntersect(ray, its, false);
     }
 
-    //MediumIntersection sampleMediumBetween(Point3f x, Point3f xz, float rnd) const{
-    //    MediumIntersection its;
-    //    its.o = x;
-    //    its.xz = xz;
-    //    // Get bounding box of medium and move x and xz to the first and the last point of the medium
+    /*
+    * \brief Return true if there's a medium in the direction of the ray
+    * If there is one add it in the .medium
+    * We also will add the start and end of the medium. If there's no start of the medium the .ox will be the .o, 
+    * and if there's no end, we will have .p as the .xz
+    */
+    bool rayIntersectMedium(const Ray3f& ray, MediumIntersection& medIts) const {
 
-    //    //its.w = (xz-x).normalized();
-    //    its.pdf_xt = 1 / (xz - x).norm();
-    //    its.xt = (xz - x) * rnd + x;
-    //    its.medium = m_medium;
-    //}
+        if (!m_medium) {
+            return false;
+        }
+        medIts.medium = m_medium;
+
+        if (!m_medium->getBoundingBoxAsMesh()) {
+            // There's no BoundingBox for the medium -> x is camera, xz is the intersection with an object
+            medIts.x = medIts.o;
+            medIts.xz = medIts.p;
+            return true;
+        }
+
+        Intersection start_its;
+        bool mediumFound = m_accel_medium->rayIntersect(ray, start_its, false);
+        if (mediumFound) {
+            // If we now create a ray that starts a little bit after that intersection, 
+            // we can call another one to find the end:
+            Ray3f end_ray(ray);
+            // That 0.01 should be EPSILON_FLT
+            end_ray.o = end_ray.o + 0.01 * end_ray.d;
+            Intersection end_its;
+            bool endMediumFound = m_accel_medium->rayIntersect(end_ray, end_its, false);
+            if (endMediumFound) {
+                // its has a .p that is the start of the medium:
+                medIts.x = start_its.p;
+                medIts.xz = end_its.p;
+            }
+            else {
+                // If we don't find the second intersection it's because the camera is 
+                // inside the bounding box, so the first intersection is the end of the medium
+                medIts.x = medIts.o;
+                medIts.xz = medIts.p;
+            }
+        }
+        return mediumFound;
+    }
+
 
     /**
      * \brief Intersect a ray against all triangles stored in the scene
@@ -160,6 +194,7 @@ private:
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;
     Accel *m_accel = nullptr;
+    Accel* m_accel_medium = nullptr;
     Medium *m_medium = nullptr;
 };
 

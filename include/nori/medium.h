@@ -15,22 +15,26 @@
 NORI_NAMESPACE_BEGIN
 
 ///**
-// * \brief Intersection data structure
+// * \brief MediumIntersection data structure
 // *
-// * This data structure records local information about a ray-triangle intersection.
-// * This includes the position, traveled ray distance, uv coordinates, as well
-// * as well as two local coordinate frames (one that corresponds to the true
-// * geometry, and one that is used for shading computations).
+// * This data structure records information about a ray-triangle intersection and the medium it passes through.
+// * This includes the origin of the ray, the point where the ray intersects with the scene, 
+// * as well as the points where it enters or goes out of the medium and a sample done in the middle of it for the inscattering.
+// * as well as the local coordinate frames for the point in the medium (that depends on orientation of the particle)
 // */
 
 struct MediumIntersection {
-    /// Position for the origin
+    /// Position for the origin of the ray
     Point3f o;
-    /// Position for the end (where it hitted an intersection)
+    /// Position of the point that intersects with something in the scene
+    Point3f p;
+    // Position of the beggining of the medium
+    Point3f x;
+    /// Position for the end of the medium
     Point3f xz;
-    /// Position for the point in the middle of the Medium
+    /// Position for the point in the middle of the Medium (for inscattering)
     Point3f xt;
-    // Probability of point xt sampled
+    // Probability of a point xt sampled
     float pdf_xt;
 
     /// Local Frame
@@ -75,10 +79,12 @@ public:
     //// Return an axis-aligned bounding box of the entire mesh
     const BoundingBox3f &getBoundingBox() const { return m_bbox; }
 
+    // This cannot be const cause m_accel_medium->addMesh() need as a parameter a non const Mesh*
+    Mesh* getBoundingBoxAsMesh() const { return m_mesh; }
+
     const PhaseFunction *getPhaseFunction() const{ return m_pf; }
 
-    // WE CANNOT HAVE ANY REFERENCE TO MEDIUMINTERSECTION YET, THAT WILL HAVE TO BE DONE IN HOMOGENEUS AND HETEROGENEUS.
-    const bool sampleBetween(Point3f x, Point3f xz, float rnd, MediumIntersection &medIts) const;
+    virtual void sampleBetween(float rnd, MediumIntersection &medIts) const;
 
     /// Register a child object (e.g. a BSDF) with the mesh
     virtual void addChild(NoriObject *child, const std::string& name = "none");
@@ -90,9 +96,10 @@ public:
     std::string toString() const;
 
     /// For homogeneus and heterogeneus media to define correctly
-    const float Transmittance(Point3f x, Point3f xz) const { return 1.0f; }
+    virtual const float Transmittance(Point3f x, Point3f xz) const { return 1.0f; }
 
-    const float getScatteringCoeficient() const { return 1; }
+    // Check that this isn't a problem:
+    virtual const float getScatteringCoeficient() const { return 0.0f; }
 
     /**
      * \brief Return the type of object (i.e. Mesh/BSDF/etc.)
@@ -108,7 +115,7 @@ protected:
     std::string m_name;                  ///< Identifying name
     BoundingBox3f m_bbox;                ///< Bounding box of the mesh
     PhaseFunction* m_pf = nullptr;
-
+    Mesh* m_mesh = nullptr;
 };
 
 
