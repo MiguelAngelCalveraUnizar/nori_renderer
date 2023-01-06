@@ -91,6 +91,59 @@ float Scene::pdfEmitter(const Emitter *em) const {
     return (float)1. / (float)(m_emitters.size());
 }
 
+// Medium Intersect:
+bool Scene::rayIntersectMedium(const Ray3f& ray, MediumIntersection& medIts) const {
+    if (!m_medium) {
+        return false;
+    }
+    medIts.medium = m_medium;
+
+    if (!m_medium->getBoundingBoxAsMesh()) {
+        // There's no BoundingBox for the medium -> x is camera, xz is the intersection with an object
+        medIts.x = medIts.o;
+        medIts.xz = medIts.p;
+        return true;
+    }
+
+    Intersection start_its;
+    bool mediumFound = m_accel_medium->rayIntersect(ray, start_its, false);
+    if (mediumFound) {
+        // If we now create a ray that starts a little bit after that intersection, 
+        // we can call another one to find the end:
+        Ray3f end_ray(ray);
+        // That 0.01 should be FLT_EPSILON
+        end_ray.o = end_ray.o + 0.01 * end_ray.d;
+        Intersection end_its;
+        bool endMediumFound = m_accel_medium->rayIntersect(end_ray, end_its, false);
+        if (endMediumFound) {
+            // its has a .p that is the start of the medium:
+            medIts.x = start_its.p;
+            medIts.xz = end_its.p;
+
+            // Check we didn't cross any phisical object in between.
+            // If dist(xz,o)> dist(p,o) -> bb_medium goes beyond p, so -> xz = p
+
+            if ((medIts.xz - medIts.o).norm() > (medIts.p - medIts.o).norm()) {
+                medIts.xz = medIts.p;
+            }
+            // If dist(x,o)> dist(p,o) -> bb_medium goes after p, so -> no medium seen in this ray
+            if ((medIts.x - medIts.o).norm() > (medIts.p - medIts.o).norm()) {
+                return false;
+            }
+
+        }
+        else {
+            // If we don't find the second intersection it's because the camera is 
+            // inside the bounding box, so the first intersection is the end of the medium
+            medIts.x = medIts.o;
+            medIts.xz = start_its.p;
+        }
+    }
+
+
+    return mediumFound;
+}
+
 
 void Scene::addChild(NoriObject *obj, const std::string& name) {
     switch (obj->getClassType()) {
