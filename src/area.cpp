@@ -80,6 +80,10 @@ public:
 		float prob_s = m_mesh->pdf(lRec.p);
 		float denom = (std::abs(lRec.n.dot(lRec.wi)));
 		float norm = lRec.dist;
+		if (denom < FLT_EPSILON) {
+			denom = FLT_EPSILON;
+		}
+		float pdf_value = prob_s * norm * norm / denom;
 		return prob_s * norm * norm / denom;
 	}
 
