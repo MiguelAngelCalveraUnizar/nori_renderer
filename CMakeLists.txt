@@ -110,6 +110,7 @@ add_executable(nori
   src/medium.cpp
   src/single_scat.cpp
   src/homogeneous.cpp
+  src/vol_path.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})
