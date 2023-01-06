@@ -32,11 +32,13 @@ NORI_NAMESPACE_BEGIN
 
 Scene::Scene(const PropertyList &) {
     m_accel = new Accel();
+    m_accel_medium = new Accel();
     m_enviromentalEmitter = 0;
 }
 
 Scene::~Scene() {
     delete m_accel;
+    delete m_accel_medium;
     delete m_sampler;
     delete m_camera;
     delete m_integrator;
@@ -52,6 +54,12 @@ void Scene::activate() {
             m_emitters.push_back(m_meshes[i]->getEmitter());
 
     m_accel->build();
+    std::cout << "Accel Medium adding the medium bounding box \n";
+    if (m_medium->getBoundingBoxAsMesh()) {
+        m_accel_medium->addMesh(m_medium->getBoundingBoxAsMesh());
+    }
+    m_accel_medium->build();
+    std::cout << "Finished Accel Medium building \n";
 
     if (!m_integrator)
         throw NoriException("No integrator was specified!");
@@ -96,6 +104,8 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
             if (m_medium)
                 throw NoriException("There can only be one medium per scene!");
             m_medium = static_cast<Medium*>(obj);
+            // We should add the mesh here to m_accel_medium, but instead 
+            // I do it in the activate function of scene.cpp
         }
             break;
 

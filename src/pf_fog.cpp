@@ -38,10 +38,6 @@ public:
         return eval(bRec) / pdf_sample;
     }
 
-    bool isDiffuse() const {
-        return true;
-    }
-
     /// Return a human-readable summary
     std::string toString() const {
         return tfm::format(

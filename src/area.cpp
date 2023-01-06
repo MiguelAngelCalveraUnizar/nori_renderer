@@ -76,15 +76,19 @@ public:
 	virtual float pdf(const EmitterQueryRecord &lRec) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
-		// TODO:
 		float prob_s = m_mesh->pdf(lRec.p);
 		float denom = (std::abs(lRec.n.dot(lRec.wi)));
 		float norm = lRec.dist;
+		
 		if (denom < FLT_EPSILON) {
 			denom = FLT_EPSILON;
 		}
 		float pdf_value = prob_s * norm * norm / denom;
-		return prob_s * norm * norm / denom;
+		if (isnan(pdf_value)) {
+			// Result of norm being 0 and denom being 0:
+			pdf_value = 0;
+		}
+		return pdf_value;
 	}
 
 

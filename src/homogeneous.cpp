@@ -18,26 +18,33 @@ public:
         std::cout << " Mu_t : " << mu_t <<"\n";
     }
 
-    const float Transmittance(Point3f x0, Point3f xz) const {
-        float res = std::exp(-mu_t * (x0 - xz).norm());
+
+    /*
+    * This function gives the trasnmittance between 2 points
+    * This assumes the medium is actually between the 2 points you selected, if you pick a new 
+    * random point without checking if it's on the bounding box of the medium or not, it will not work
+    */
+    virtual const float Transmittance(Point3f x, Point3f xz) const {
+        float res = std::exp(-mu_t * (x - xz).norm());
         return res;
     }
 
-    const float getScatteringCoeficient() const{
+    virtual const float getScatteringCoeficient() const{
         return mu_s;
     }
 
-    const bool sampleBetween(Point3f x, Point3f xz, float rnd, MediumIntersection& medIts) const {
-        //Return if the medium is in between x and xz or not. If there's not, then there's no use in doing this.
-        medIts.xz = xz;
-        medIts.o = x;
+    /* 
+    * Void function 
+    * Adds to medIts a .xt and the corresponding pdf_xt as well as the .shFrame of the particle (always the same as we have isotropic homogeneus media) 
+    */
+    virtual void sampleBetween(float rnd, MediumIntersection& medIts) const {
+        Point3f xz = medIts.xz;
+        Point3f x = medIts.x;
         // This frame will be different for heterogeneus media or media where the phase function has orientation.
         medIts.shFrame = Frame(Vector3f(1, 0, 0));
-        
         float t = log(rnd) / mu_t;
         medIts.pdf_xt = mu_t * exp(-mu_t * t);
         medIts.xt = x + t * (xz - x);
-        return true;
     }
 
 

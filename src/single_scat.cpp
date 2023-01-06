@@ -19,12 +19,13 @@ public:
     {
         Color3f Lo(0.); // Total radiance
         Color3f Ld(0.); // Direct Light to a point.
+        Color3f Ls(0.); // Scattering light from the medium to a point
         Color3f Le(0.); // Emitter radiance
 
         // Boundary of the medium
         Intersection its;
         if (!scene->rayIntersect(ray, its)) {
-            // This is incorrect, the background is also affected by transmittance and everything
+            // This is incorrect, the background is also affected by transmittance and inscattering
             return scene->getBackground(ray);
         }
         // Get value of the emmiter if it is one.
@@ -32,26 +33,34 @@ public:
             Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(its.mesh->getEmitter(), ray.o, its.p, its.shFrame.n, its.uv));
         }
 
-        // Imagine for some reason we get a participating media through the intersection
-        // Then we will have access to the mu_t inside, so we can pass it to Transmittance
-        Point3f xz = its.p;
-        Point3f x = ray.o;
         Vector3f w = ray.d;
-
         MediumIntersection medIts;
-        medIts.medium = scene->getMedium();
-        scene->getMedium()->sampleBetween(x, xz, sampler->next1D(), medIts);
-        Ld = medIts.medium->Transmittance(x, xz) * DirectLight(scene, sampler, its, medIts, ray);
+        medIts.o = ray.o;
+        medIts.p = its.p;
+        bool mediumFound = scene->rayIntersectMedium(ray, medIts);
+        if (!mediumFound) {
+            Ld = DirectLight(scene, sampler, its, medIts, ray);
+            Lo = Le + Ld; // Ls is 0 (No medium -> no inscattering and transmittance = 1)
+            return Lo;
+        }
+        // Now medIts has .medium and information about intersection
+        scene->getMedium()->sampleBetween(sampler->next1D(), medIts);
+        Ld = DirectLight(scene, sampler, its, medIts, ray);
 
         // Inscattering
-        Lo = Le + Ld + medIts.medium->Transmittance(x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
-       
+        Ls = medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
+        // We sum everything (emitter and Direct light are affected by same transmittance)
+        Lo = Ls + (Le + Ld) * medIts.medium->Transmittance(medIts.x, medIts.xz);
+
+        /*if (isnan(Ls[0]) || isnan(Ls[1]) || isnan(Ls[2])) {
+            std::cout << "Ls is nan \n";
+        }*/
+
         return Lo;
     }
 
     const Color3f DirectLight(const Scene* scene, Sampler* sampler, Intersection its, MediumIntersection medIts, Ray3f ray)const {
         // For readability we turn its into xz etc
-        //std::cout << "DirectLight in single scat\n";
         Point3f xz = its.p;
         Vector3f w = ray.d;
         Color3f Lems = 0;
@@ -60,7 +69,6 @@ public:
         float p_mat_wem = 0;
         float p_mat_wmat = 0;
         float p_em_wmat = 0;
-
 
         // Sample the emitter
         //<E, pdf_E> = scene.sampleEmiter(xz)
@@ -71,6 +79,7 @@ public:
         //< Le, xe, pdf_e > = E.sample(xz);
         EmitterQueryRecord emitterRecordEms(xz);
         Color3f Le = light->sample(emitterRecordEms, sampler->next2D(), 0.);
+
         float pdf_light_point = light->pdf(emitterRecordEms);
         Point3f xe = emitterRecordEms.p;
         
@@ -95,7 +104,19 @@ public:
             p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEms);
 
             //Lems = Le * Transmittance(xz, xe) * xz.BRDF.eval(w, (xe - xz)) * cos(xe - xz, xz.n);
-            Lems = Le * medIts.medium->Transmittance(xz, xe) * its.mesh->getBSDF()->eval(bsdfRecordEms) *
+            // But wait! We are not sure that the light is also in the medium or even that p is in the medium!
+            // So we can create a mediumIntersection to handle that:
+            MediumIntersection medIts_em;
+            medIts_em.o = xz; // Point in the intersection
+            medIts_em.p = xe; // Point in emitter
+            bool mediumFound_em = scene->rayIntersectMedium(sray, medIts_em);
+            // Now we have if there's a medium we put the correct Transmittance:
+            float Transmittance_em = 1;
+            if (mediumFound_em) {
+                Transmittance_em = medIts_em.medium->Transmittance(medIts_em.x, medIts_em.xz);
+            }
+
+            Lems = Le * Transmittance_em * its.mesh->getBSDF()->eval(bsdfRecordEms) *
                 its.shFrame.n.dot(emitterRecordEms.wi) / p_em_wem;
         }
 
@@ -114,15 +135,26 @@ public:
             if (it_next.mesh->isEmitter()) {
                 //xem = scene.intersect(Ray(xz,wo));
                 Point3f xem = it_next.p;
-
                 EmitterQueryRecord emitterRecordMat(it_next.mesh->getEmitter(), its.p, it_next.p, it_next.shFrame.n, it_next.uv);
-                // Lmat = xem.emit(xz) * Transmittance(xz, xem) * fs;
-                Lmat = it_next.mesh->getEmitter()->eval(emitterRecordMat) * fs * medIts.medium->Transmittance(xz, xem);
-
+                
                 // Get p_em_wmat
                 p_em_wmat = it_next.mesh->getEmitter()->pdf(emitterRecordMat);
                 //Compute the p_mat(sample mats)
                 p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
+
+
+                MediumIntersection medIts_mats;
+                medIts_mats.o = xz; // Point in the intersection
+                medIts_mats.p = xem; // Point in emitter
+                bool mediumFound_mats = scene->rayIntersectMedium(next_ray, medIts_mats);
+                // Now we have if there's a medium we put the correct Transmittance:
+                float Transmittance_mats = 1;
+                if (mediumFound_mats) {
+                    Transmittance_mats = medIts_mats.medium->Transmittance(medIts_mats.x, medIts_mats.xz);
+                }
+
+                // Lmat = xem.emit(xz) * Transmittance(xz, xem) * fs;
+                Lmat = it_next.mesh->getEmitter()->eval(emitterRecordMat) * Transmittance_mats * fs;
             }
         }
         /*else {
@@ -142,11 +174,12 @@ public:
             w_mat = p_mat_wmat / (p_em_wmat + p_mat_wmat);
             // Lmats was divided by p_mat_wmat before (fs contains already p_mat_wmat), so now it is multiplied.
         }
+
         return Lems * w_em + Lmat * w_mat;
     }
 
-    Color3f Inscattering(const Scene* scene, Sampler* sampler, MediumIntersection its, Ray3f ray) const {
-        Point3f xt = its.xt;
+    Color3f Inscattering(const Scene* scene, Sampler* sampler, MediumIntersection medIts, Ray3f ray) const {
+        Point3f xt = medIts.xt;
         Vector3f w = ray.d;
         Color3f Lems = 0;
         Color3f Lmat = 0;
@@ -154,7 +187,6 @@ public:
         float p_mat_wem = 0;
         float p_mat_wmat = 0;
         float p_em_wmat = 0;
-
 
         // Sample the emitter
         //<E, pdf_E> = scene.sampleEmiter(xt)
@@ -178,23 +210,47 @@ public:
             }
         }
         //PFQueryRecord phaseRecordEms(its.toLocal(-ray.d), its.toLocal(emitterRecordEms.wi), its.uv, ESolidAngle); //
-        PFQueryRecord phaseRecordEms(its.toLocal(-ray.d), its.toLocal(emitterRecordEms.wi));
+        PFQueryRecord phaseRecordEms(medIts.toLocal(-ray.d), medIts.toLocal(emitterRecordEms.wi));
 
         if (Visibility) {
             //Compute the p_em(sample ems) and p_mat(sample ems)
             p_em_wem = pdf_light_point * pdf_light;
+            if (p_em_wem < FLT_EPSILON) {
+                p_em_wem = FLT_EPSILON;
+            }
             // For MSI we need to evaluate respect to p_mat_wem the pdf of the direction
-            p_mat_wem = its.medium->getPhaseFunction()->pdf(phaseRecordEms);
+            // WARNING: GetPhaseFuntion will ned a phaseRecordEms that is correctly defined
+            p_mat_wem = medIts.medium->getPhaseFunction()->pdf(phaseRecordEms);
+
+            MediumIntersection medIts_em;
+            medIts_em.o = xt; // Point in the intersection
+            medIts_em.p = xe; // Point in emitter
+            bool mediumFound_em = scene->rayIntersectMedium(sray, medIts_em);
+            // Now we have if there's a medium we put the correct Transmittance:
+            float Transmittance_em = 1;
+            if (mediumFound_em) {
+                Transmittance_em = medIts_em.medium->Transmittance(medIts_em.x, medIts_em.xz);
+            }
 
             //Lems = Le * Transmittance(xt, xe) * xt.PF.eval(w, (xe - xt)) * mu_s;
-            Lems = Le * its.medium->Transmittance(xt, xe) * its.medium->getPhaseFunction()->eval(phaseRecordEms) * its.medium->getScatteringCoeficient() / p_em_wem;;
+            // We only check for medium in Transmittance cause in xt we assured before there's a medium
+            // That's also why there we use medIts. The phase function and scattering coeficient are important for
+            Lems = Le * Transmittance_em * medIts.medium->getPhaseFunction()->eval(phaseRecordEms) * medIts.medium->getScatteringCoeficient() / p_em_wem;
+
+            if (isnan(Lems[0]) || isnan(Lems[1]) || isnan(Lems[2])) {
+                std::cout << "Lems is nan \n";
+                std::cout << "Le " << Le.toString() << " ; pf_eval " << medIts.medium->getPhaseFunction()->eval(phaseRecordEms).toString();
+                std::cout << " ; mu_s " << medIts.medium->getScatteringCoeficient() << " ; p_em_wem " << p_em_wem;
+                std::cout << "pdf_light " << pdf_light << " ; pdf_light_point "<< pdf_light_point<<"\n";
+            }
+
         }
         
         // Sample the phase function
         //<fs, wo, pdf_m> = xt.PF.sample(w);
         //PFQueryRecord phaseRecordMats(its.toLocal(-ray.d), its.uv);
-        PFQueryRecord phaseRecordMats(its.toLocal(-ray.d));
-        Color3f fs = its.medium->getPhaseFunction()->sample(phaseRecordMats, sampler->next2D());
+        PFQueryRecord phaseRecordMats(medIts.toLocal(-ray.d));
+        Color3f fs = medIts.medium->getPhaseFunction()->sample(phaseRecordMats, sampler->next2D());
         // sample will get us wo and fs
         Vector3f wo = phaseRecordMats.wo;
 
@@ -202,21 +258,31 @@ public:
         // xem = scene.intersect(Ray(xt, wo));
         // Ray from xt with wo to see if it intersects in a emitter
         //if (xem.esEmitter())
-        Ray3f next_ray(its.xt, its.toWorld(phaseRecordMats.wo));
+        Ray3f next_ray(medIts.xt, medIts.toWorld(phaseRecordMats.wo));
         Intersection it_next;
         if (scene->rayIntersect(next_ray, it_next)) {
             if (it_next.mesh->isEmitter()) {
                 //xem = scene.intersect(Ray(xz,wo));
                 Point3f xem = it_next.p;
-
                 //Lmat = xem.emit(xt) * Transmittance(xt, xem) * fs * mu_s;
-                EmitterQueryRecord emitterRecordMat(it_next.mesh->getEmitter(), its.xt, it_next.p, it_next.shFrame.n, it_next.uv);
-                Lmat = it_next.mesh->getEmitter()->eval(emitterRecordMat) * fs * its.medium->Transmittance(xt, xem) * its.medium->getScatteringCoeficient();
+                EmitterQueryRecord emitterRecordMat(it_next.mesh->getEmitter(), medIts.xt, it_next.p, it_next.shFrame.n, it_next.uv);
 
                 // Get p_em_wmat
                 p_em_wmat = it_next.mesh->getEmitter()->pdf(emitterRecordMat);
                 //Compute the p_mat(sample mats)
-                p_mat_wmat = its.medium->getPhaseFunction()->pdf(phaseRecordMats);
+                p_mat_wmat = medIts.medium->getPhaseFunction()->pdf(phaseRecordMats);
+
+                MediumIntersection medIts_mats;
+                medIts_mats.o = xt; // Point in the intersection
+                medIts_mats.p = xem; // Point in emitter
+                bool mediumFound_mats = scene->rayIntersectMedium(next_ray, medIts_mats);
+                // Now we have if there's a medium we put the correct Transmittance:
+                float Transmittance_mats = 1;
+                if (mediumFound_mats) {
+                    Transmittance_mats = medIts_mats.medium->Transmittance(medIts_mats.x, medIts_mats.xz);
+                }
+
+                Lmat = it_next.mesh->getEmitter()->eval(emitterRecordMat) * fs * Transmittance_mats * medIts.medium->getScatteringCoeficient();
             }
         }
         /*else {
@@ -238,6 +304,11 @@ public:
         if ((p_em_wmat + p_mat_wmat) > FLT_EPSILON) {
             w_mat = p_mat_wmat / (p_em_wmat + p_mat_wmat);
             // Lmats was divided by p_mat_wmat before (fs contains already p_mat_wmat), so now it is multiplied.
+        }
+
+
+        if (isnan(Lems[0])|| isnan(Lems[1])|| isnan(Lems[2])) {
+            std::cout << "Lems is nan \n";
         }
 
         return Lems * w_em + Lmat * w_mat;
