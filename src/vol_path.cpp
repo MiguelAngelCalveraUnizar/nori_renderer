@@ -72,7 +72,7 @@ public:
                         Lo += fr * EmsSampling(scene, sampler, its, medIts, next_ray);
                         
                         //Generate next ray
-                        Vector3f wi = -ray.d;
+                        Vector3f wi = -next_ray.d;
                         PFQueryRecord pfRecord(medIts.toLocal(wi));
                         Color3f  phase = scene->getMedium()->getPhaseFunction()->sample(pfRecord, sampler->next2D());
                         Vector3f wo = pfRecord.wo;
