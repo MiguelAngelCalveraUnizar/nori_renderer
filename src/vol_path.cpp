@@ -22,6 +22,7 @@ public:
         Color3f Ls(0.); // Scattering light from the medium to a point
         Color3f Le(0.); // Emitter radiance
 		Color3f fr(1); //Thoughput
+        float w_mat, p_mat_wmat = 0, p_em_wmat;
 		bool keepTracing = true;
 		Ray3f next_ray(ray);
 		EMeasure measure_last_bsdf = EUnknownMeasure;
@@ -36,71 +37,109 @@ public:
 			//Try to intersect the last generated ray
 			Intersection its;
 			
-			if (scene->rayIntersect(next_ray, its)) {
+            if (scene->rayIntersect(next_ray, its)) {
                 // If it intersect but it's not an emitter create another bounce with some prob.
-				if (!its.mesh->isEmitter()) {	
-					// Check if next_ray travels thought a participating media
-					Vector3f w = ray.d;
-					MediumIntersection medIts;
-					medIts.o = ray.o;
-					medIts.p = its.p;
-					bool mediumFound = scene->rayIntersectMedium(ray, medIts);
-					if (!mediumFound) {
-						Lo += fr * EmsSampling(scene, sampler, its, medIts, ray);
-						// Ls is 0 (No medium -> no inscattering and transmittance = 1)
-					
-						// Sample the BRDF
-						//<fs, wo, pdf_m> = xz.BRDF.sample(w);
-						BSDFQueryRecord bsdfRecordMat(its.toLocal(-ray.d), its.uv);
-						fr *= its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
-						measure_last_bsdf = bsdfRecord.measure;
-						//Compute the p_mat(sample mats)
-						p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecord);
-							
-						// New ray:
-						next_ray = Ray3f(its.p, its.toWorld(bsdfRecord.wo));
-						// For RR saying to not continuing with probability of sample()
-						rr_limit = std::min(0.9f, (std::max(fr[0], std::max(fr[1], fr[2]))));		
-					}else{ 
-						// Now medIts has .medium and information about intersection
-						scene->getMedium()->sampleBetween(sampler->next1D(), medIts);
-						fr *= medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
-						Lo += fr * EmsSampling(scene, sampler, its, medIts, ray);
-						
-						//Generate next ray
-						Vector3f wi = -ray.d;
-						PFQueryRecord pfRecord(wi);
-						Vector3f wo = scene->getMedium()->getPhaseFunction->sample(pfRecord, sampler->next2D());
-						next_ray = Ray3f(its.p, its.toWorld(pfRecord.wo));
-					
-						/*if (isnan(Ls[0]) || isnan(Ls[1]) || isnan(Ls[2])) {
-							std::cout << "Ls is nan \n";
-						}*/
-					}
-				}
-			}else{
-				// If it does intersect with an emitter stop the bouncing and add up the contribution weighted with the p_mat_wmat gotten before.
-				keepTracing = false;
-				EmitterQueryRecord emitterRecord(its.mesh->getEmitter(), next_ray.o, its.p, its.shFrame.n, its.uv);
-				// p_mat_wmat gotten from before 
-				// Get p_em_wmat
-				p_em_wmat = its.mesh->getEmitter()->pdf(emitterRecord);
-				w_mat = (p_em_wmat + p_mat_wmat) > FLT_EPSILON ? p_mat_wmat / (p_em_wmat + p_mat_wmat) : 0;
+                if (!its.mesh->isEmitter()) {
+                    // Check if next_ray travels thought a participating media
+                    Vector3f w = next_ray.d;
+                    MediumIntersection medIts;
+                    medIts.o = next_ray.o;
+                    medIts.p = its.p;
+                    bool mediumFound = scene->rayIntersectMedium(next_ray, medIts);
+                    if (!mediumFound) {
+                        Lo += fr * EmsSampling(scene, sampler, its, medIts, next_ray);
+                        //std::cout << "Lo value: " << Lo.toString() << std::endl;
+                        // Ls is 0 (No medium -> no inscattering and transmittance = 1)
 
-				Le = its.mesh->getEmitter()->eval(emitterRecord);
+                        // Sample the BRDF
+                        //<fs, wo, pdf_m> = xz.BRDF.sample(w);
+                        BSDFQueryRecord bsdfRecordMat(its.toLocal(-next_ray.d), its.uv);
+                        fr *= its.mesh->getBSDF()->sample(bsdfRecordMat, sampler->next2D());
+                        measure_last_bsdf = bsdfRecordMat.measure;
+                        //Compute the p_mat(sample mats)
+                        p_mat_wmat = its.mesh->getBSDF()->pdf(bsdfRecordMat);
 
-				// If we didn't have bounced in any surface, then we need the whole value of Le to be Lo: w_mat = fr = 1
-				if (n_bounces == 0) {
-					w_mat = 1;
-				}
-				if (measure_last_bsdf == EDiscrete) {
-					// If the material_bsdf is discrete then it's delta so then the pdf would be 0 -> meaning that it wouldn't take it into account
-					// But if it's discrete, it's the only direction that can go to.
-					w_mat = 1;
-				}
-				Lo += fr * Le * w_mat;Le = its.mesh->getEmitter()->eval(EmitterQueryRecord(its.mesh->getEmitter(), ray.o, its.p, its.shFrame.n, its.uv));
-			}
-			
+                        // New ray:
+                        next_ray = Ray3f(its.p, its.toWorld(bsdfRecordMat.wo));
+                        // For RR saying to not continuing with probability of sample()
+                        rr_limit = std::min(0.9f, (std::max(fr[0], std::max(fr[1], fr[2]))));
+                    }
+                    else {
+                        
+                        // Now medIts has .medium and information about intersection
+                        scene->getMedium()->sampleBetween(sampler->next1D(), medIts);
+                        fr *= medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, next_ray) / medIts.pdf_xt;
+                        Lo += fr * EmsSampling(scene, sampler, its, medIts, next_ray);
+                        
+                        //Generate next ray
+                        Vector3f wi = -ray.d;
+                        PFQueryRecord pfRecord(medIts.toLocal(wi));
+                        Color3f  phase = scene->getMedium()->getPhaseFunction()->sample(pfRecord, sampler->next2D());
+                        Vector3f wo = pfRecord.wo;
+                        next_ray = Ray3f(its.p, its.toWorld(pfRecord.wo));
+
+                        
+                        /*if (isnan(Ls[0]) || isnan(Ls[1]) || isnan(Ls[2])) {
+                            std::cout << "Ls is nan \n";
+                        }*/
+                        
+                    }
+
+                }
+                else {
+                    
+                   
+                    // If it does intersect with an emitter stop the bouncing and add up the contribution weighted with the p_mat_wmat gotten before.
+                    keepTracing = false;
+                    EmitterQueryRecord emitterRecord(its.mesh->getEmitter(), next_ray.o, its.p, its.shFrame.n, its.uv);
+                    // p_mat_wmat gotten from before 
+                    // Get p_em_wmat
+                    p_em_wmat = its.mesh->getEmitter()->pdf(emitterRecord);
+                    w_mat = (p_em_wmat + p_mat_wmat) > FLT_EPSILON ? p_mat_wmat / (p_em_wmat + p_mat_wmat) : 0;
+
+                    Le = its.mesh->getEmitter()->eval(emitterRecord);
+
+                    // If we didn't have bounced in any surface, then we need the whole value of Le to be Lo: w_mat = fr = 1
+                    if (n_bounces == 0) {
+                        w_mat = 1;
+                    }
+                    if (measure_last_bsdf == EDiscrete) {
+                        // If the material_bsdf is discrete then it's delta so then the pdf would be 0 -> meaning that it wouldn't take it into account
+                        // But if it's discrete, it's the only direction that can go to.
+                        w_mat = 1;
+                    }
+                    Lo += fr * Le * w_mat;
+                    
+                }
+            }
+            else {
+                keepTracing = false;
+
+                const Emitter* env_emitter = scene->getEnvironmentalEmitter();
+                // If we didn't intersect with anything and the scene has a enviromental emitter:
+                if (env_emitter) {
+                    // Then the background has an emmitter.
+                    // do we have to weight this one as well?
+                    // TODO HERE
+                    EmitterQueryRecord emitterRecord(env_emitter, next_ray.o, its.p, its.shFrame.n, its.uv);
+                    // p_mat_wmat gotten from before 
+                    // Get p_em_wmat
+                    p_em_wmat = env_emitter->pdf(emitterRecord);
+                    w_mat = (p_em_wmat + p_mat_wmat) > FLT_EPSILON ? p_mat_wmat / (p_em_wmat + p_mat_wmat) : 0;
+
+                    Le = scene->getBackground(next_ray);
+                    // If we didn't have bounced in any surface, then we need the whole value of Le to be Lo: w_mat = fr = 1
+                    if (n_bounces == 0) {
+                        w_mat = 1;
+                    }
+                    if (measure_last_bsdf == EDiscrete) {
+                        // If the material_bsdf is discrete then it's delta so then the pdf would be 0 -> meaning that it wouldn't take it into account
+                        // But if it's discrete, it's the only direction that can go to.
+                        w_mat = 1;
+                    }
+                    Lo += fr * Le * w_mat;
+                }
+            }
 			// Extra end conditions:
             // not continuing with probability of sample() accumulated
             float rnd = (float)rand() / RAND_MAX;
@@ -244,12 +283,12 @@ public:
         // For readability we turn its into xz etc
         Point3f xz = its.p;
         Vector3f w = ray.d;
-        Color3f Lems = 0;
+        Color3f Lems(0.);
         //Color3f Lmat = 0;
         float p_em_wem = 0;
-        //float p_mat_wem = 0;
+        float p_mat_wem = 0;
         //float p_mat_wmat = 0;
-        float p_em_wmat = 0;
+        //float p_em_wmat = 0;
 
         // Sample the emitter
         //<E, pdf_E> = scene.sampleEmiter(xz)
@@ -260,7 +299,6 @@ public:
         //< Le, xe, pdf_e > = E.sample(xz);
         EmitterQueryRecord emitterRecordEms(xz);
         Color3f Le = light->sample(emitterRecordEms, sampler->next2D(), 0.);
-
         float pdf_light_point = light->pdf(emitterRecordEms);
         Point3f xe = emitterRecordEms.p;
         
@@ -302,10 +340,10 @@ public:
             if (mediumFound_em) {
                 Transmittance_em = medIts_em.medium->Transmittance(medIts_em.x, medIts_em.xz);
             }
-
-            //Lems = Le * Transmittance_em * its.mesh->getBSDF()->eval(bsdfRecordEms) *
-            //    its.shFrame.n.dot(emitterRecordEms.wi) / p_em_wem;
-			Lems = Le * Transmittance_em * pdf_light * w_em;
+            //std::cout << "Transmitance value: " << Transmittance_em << std::endl;
+            Lems = Le * Transmittance_em * its.mesh->getBSDF()->eval(bsdfRecordEms) *
+                its.shFrame.n.dot(emitterRecordEms.wi) / p_em_wem;
+			//Lems = Le * Transmittance_em * pdf_light * w_em;
 		}
 
 
@@ -319,7 +357,7 @@ public:
     Color3f Inscattering(const Scene* scene, Sampler* sampler, MediumIntersection medIts, Ray3f ray) const {
         Point3f xt = medIts.xt;
         Vector3f w = ray.d;
-        Color3f Lems = 0;
+        Color3f Lems(0.);
         Color3f Lmat = 0;
         float p_em_wem = 0;
         float p_mat_wem = 0;
