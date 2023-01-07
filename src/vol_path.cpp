@@ -68,9 +68,8 @@ public:
                         
                         // Now medIts has .medium and information about intersection
                         scene->getMedium()->sampleBetween(sampler->next1D(), medIts);
-                        fr *= medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, next_ray) / medIts.pdf_xt;
+                        fr *= medIts.medium->Transmittance(medIts.x, medIts.xt) / medIts.pdf_xt;
                         Lo += fr * EmsSampling(scene, sampler, its, medIts, next_ray);
-                        
                         //Generate next ray
                         Vector3f wi = -next_ray.d;
                         PFQueryRecord pfRecord(medIts.toLocal(wi));
@@ -323,6 +322,10 @@ public:
             // For MSI we need to evaluate respect to p_mat_wem the pdf of the direction
             p_mat_wem = its.mesh->getBSDF()->pdf(bsdfRecordEms);
 
+            if (p_em_wem < FLT_EPSILON) {
+                p_em_wem = FLT_EPSILON;
+            }
+
 			float w_em = 0;
 			if ((p_em_wem + p_mat_wem) > FLT_EPSILON) {
 				w_em = p_em_wem / (p_em_wem + p_mat_wem);
@@ -343,7 +346,6 @@ public:
             //std::cout << "Transmitance value: " << Transmittance_em << std::endl;
             Lems = Le * Transmittance_em * its.mesh->getBSDF()->eval(bsdfRecordEms) *
                 its.shFrame.n.dot(emitterRecordEms.wi) / p_em_wem;
-			//Lems = Le * Transmittance_em * pdf_light * w_em;
 		}
 
 
