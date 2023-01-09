@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<scene>
+	<integrator type="single_scat"/>
+
+	<camera type="perspective">
+		<float name="fov" value="70"/>
+		<transform name="toWorld">
+			<scale value="-1,1,1"/>
+			<lookat target="0.453311, 15.3292, 20.2983" origin="0.485459, 15.9918, 21.0465" up="0.00133283, 0.748602, -0.663019"/>
+		</transform>
+
+		<integer name="height" value="600"/>
+		<integer name="width" value="800"/>
+	</camera>
+
+	<sampler type="independent">
+		<integer name="sampleCount" value="32"/>
+	</sampler>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/rightwall_sc.obj"/>
+
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.161 0.133 0.427"/>
+		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/walls_sc.obj"/>
+
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/leftwall_sc.obj"/>
+
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.630 0.065 0.05"/>
+		</bsdf>
+	</mesh>
+
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/light_sc.obj"/>
+
+		<emitter type="area">
+			<color name="radiance" value="10 10 10"/>
+		</emitter>
+	</mesh>
+
+	
+
+	<medium type="heterogeneus">
+		<float name="mu_s" value="0"/>
+		<float name="mu_a" value="0"/>
+		<phase type="pf_fog">
+		</phase>
+
+		<mesh type="obj">
+			<string name="filename" value="data/volume-stencil.obj"/>
+		</mesh>
+
+		<!-- It's stupid but you HAVE TO put 3 volumes, and they need to be Density, Albedo and then Orientation  -->
+		<volume type="gridVolume">
+			<!-- Voltype: Density=0, Albedo=1, Orientation=2-->
+			<integer name="voltype" value="0"/>
+			<string name="filename" value="volume_000_000_002-density.vol"/>
+		</volume>
+
+		<volume type="constVolume">
+			<!-- Voltype: Density=0, Albedo=1, Orientation=2-->
+			<integer name="voltype" value="1"/>
+			<color name="input" value="0.5 0.5 0.5"/>
+		</volume>
+
+		<volume type="HgridVolume">
+			<!-- Voltype: Density=0, Albedo=1, Orientation=2-->
+			<integer name="voltype" value="2"/>
+			<string name="filename" value="data/volume_description.vol"/>
+			<string name="prefix" value="data/volume_"/>
+			<string name="postfix" value="-orientation.vol"/>
+		</volume>
+	</medium>
+
+</scene>
