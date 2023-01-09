@@ -4,6 +4,7 @@
 #include <nori/emitter.h>
 #include <nori/bsdf.h>
 
+#define TEST_SCARF_MODEL
 
 #include <nori/pf.h>
 
@@ -49,13 +50,34 @@ public:
 
         // Inscattering
         Ls = medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
+
         // We sum everything (emitter and Direct light are affected by same transmittance)
-        Lo = Ls + (Le + Ld) * medIts.medium->Transmittance(medIts.x, medIts.xz);
-
-        /*if (isnan(Ls[0]) || isnan(Ls[1]) || isnan(Ls[2])) {
-            std::cout << "Ls is nan \n";
-        }*/
-
+        //Lo = Ls + (Le + Ld) * medIts.medium->Transmittance(medIts.x, medIts.xz);
+        //
+        //float c = medIts.medium->m_vol_density->lookupDensity((medIts.x+medIts.xz)/2);
+        //std::cout << "is density :" << medIts.medium->m_vol_density->isDensity();
+        
+        //Lo = Color3f(or [0], or [1], or[2]);
+        /*else {
+            Lo = Ls + (Le + Ld) * medIts.medium->Transmittance(medIts.x, medIts.xz);
+        }*/ 
+        
+        //;
+        //Vector3f or = medIts.medium->m_vol_orientation->lookupOrientation(medIts.xt);
+        std::cout << "xyz: " << medIts.x.toString()<<"\n";
+        Point3f m = (medIts.x+medIts.xz)/2;
+        for (int i = 0;i < 10;i++) {
+            /*m += medIts.x*(0.01f / (medIts.xz - medIts.x).norm());*/
+            //break;
+            //std::cout << "_pxyz->" << _p << "," << _p << "," << _p << "\n";
+            std::cout << "m xyz->" << m[0] << "," << m[1] << "," << m[2] << "\n";
+            if (medIts.medium->m_vol_density->lookupDensity(Point3f(m)) > 0) {
+                std::cout << "Hurray!";
+                Lo = Color3f(1, 0, 0);
+                break;
+            }
+        }
+        
         return Lo;
     }
 

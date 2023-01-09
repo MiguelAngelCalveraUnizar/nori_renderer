@@ -37,4 +37,24 @@ void NoriObjectFactory::registerClass(const std::string &name, const Constructor
     (*m_constructors)[name] = constr;
 }
 
+// Things from mitsuba:
+
+void NoriObject::incRef() const {
+
+    _InterlockedIncrement(&m_refCount);
+
+}
+
+void NoriObject::decRef(bool autoDeallocate) const {
+    bool deallocate = false; //autoDeallocate
+    int count = _InterlockedDecrement(&m_refCount);
+    if(count >= 0) std::cout<<"Reference count is below zero!\n";
+    if (count == 0 && deallocate) {
+        std::cout << "Reference being deleted for some reason!\n";
+        delete this;
+    }
+}
+
+
+
 NORI_NAMESPACE_END

@@ -43,6 +43,9 @@ public:
         ESampler,
         ETest,
         EReconstructionFilter,
+        EVolume,
+        EStream,
+        EMMAP,
         EClassTypeCount
     };
 
@@ -85,6 +88,22 @@ public:
      */
     virtual void activate();
 
+    /// Return the current reference count
+    inline int getRefCount() const;
+
+    /** \brief Increase the reference count of the
+     * object by one.
+     */
+    void incRef() const;
+
+    /** \brief Decrease the reference count of
+     * the object and possibly deallocate it.
+     *
+     * The object will automatically be deallocated once
+     * the reference count reaches zero.
+     */
+    void decRef(bool autoDeallocate = true) const;
+
     /// Return a brief string summary of the instance (for debugging purposes)
     virtual std::string toString() const = 0;
     
@@ -94,6 +113,7 @@ public:
             case EScene:      return "scene";
             case EMesh:       return "mesh";
             case EMedium:     return "medium";
+            case EVolume:     return "volume";
             case EPhaseFunction: return "phase";
             case EBSDF:       return "bsdf";
             case EEmitter:    return "emitter";
@@ -104,6 +124,9 @@ public:
             default:          return "<unknown>";
         }
     }
+
+private:
+    volatile mutable long m_refCount = 0;
 };
 
 /**
@@ -150,6 +173,7 @@ public:
     }
 private:
     static std::map<std::string, Constructor> *m_constructors;
+
 };
 
 /// Macro for registering an object constructor with the \ref NoriObjectFactory

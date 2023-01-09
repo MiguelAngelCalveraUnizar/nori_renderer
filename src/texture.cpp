@@ -86,8 +86,8 @@ public:
 
 		m_color1 = props.getColor("color", Color3f(.9));
 		m_color2 = props.getColor("color", Color3f(.1));
-		m_scale[0] = props.getInteger("scalex", 1.f);
-		m_scale[1] = props.getInteger("scaley", 1.f);
+		m_scale[0] = props.getFloat("scalex", 1.f);
+		m_scale[1] = props.getFloat("scaley", 1.f);
 	}
 	~CheckerTexture()
 	{	}

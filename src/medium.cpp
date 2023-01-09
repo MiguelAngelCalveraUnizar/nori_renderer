@@ -34,28 +34,47 @@ void Medium::sampleBetween(float rnd, MediumIntersection& medIts) const {
 }
 
 
-void Medium::addChild(NoriObject *obj, const std::string& name) {
+void Medium::addChild(NoriObject* obj, const std::string& name) {
     switch (obj->getClassType()) {
-        case EPhaseFunction: {
-            if (m_pf)
-                throw NoriException(
-                    "Medium: tried to register multiple PF instances!");
-            m_pf = static_cast<PhaseFunction*>(obj);
-            std::cout << " PF Aded as child to the Medium\n";
-            break;
+    case EPhaseFunction: {
+        if (m_pf)
+            throw NoriException(
+                "Medium: tried to register multiple PF instances!");
+        m_pf = static_cast<PhaseFunction*>(obj);
+        std::cout << " PF Aded as child to the Medium\n";
+        break;
+    }
+    case EMesh: {
+        if (m_mesh)
+            throw NoriException(
+                "Medium: tried to register multiple Mesh instances!");
+        m_mesh = static_cast<Mesh*>(obj);
+        std::cout << " Mesh Aded as child to the Medium \n";
+        break;
+    }
+    case EVolume: {
+        std::cout << " Volume Aded as child to the Medium \n";
+        if  (!m_vol_density) {
+            m_vol_density = static_cast<VolumeDataSource*>(obj);
+            std::cout << "1 Albedo Aded as child to the Medium \n";
         }
-        case EMesh: {
-            if (m_mesh)
-                throw NoriException(
-                    "Medium: tried to register multiple Mesh instances!");
-            m_mesh = static_cast<Mesh*>(obj);
-            std::cout << " Mesh Aded as child to the Medium \n";
-            break;
+        else if (!m_vol_albedo) {
+            m_vol_albedo = static_cast<VolumeDataSource*>(obj);
+            std::cout << "2 Density Aded as child to the Medium \n";
         }
-                  
-        default:
-            throw NoriException("Medium::addChild(<%s>) is not supported!",
-                                classTypeName(obj->getClassType()));
+        else if (!m_vol_orientation) {
+            m_vol_orientation = static_cast<VolumeDataSource*>(obj);
+            std::cout << "3 Orientation Aded as child to the Medium \n";
+        }
+        else {
+            std::cout << " Added volume as a child to medium WITHOUT NAME \n";
+        }
+        break;
+    }
+
+    default:
+        throw NoriException("Medium::addChild(<%s>) is not supported!",
+            classTypeName(obj->getClassType()));
     }
 }
 

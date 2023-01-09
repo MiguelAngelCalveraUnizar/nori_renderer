@@ -7,6 +7,7 @@
 #include <nori/frame.h>
 #include <nori/bbox.h>
 #include <nori/dpdf.h>
+#include <nori/volume.h>
 
 #ifndef n_UINT
 #define n_UINT uint32_t
@@ -77,7 +78,7 @@ public:
     virtual void activate();
 
     //// Return an axis-aligned bounding box of the entire mesh
-    const BoundingBox3f &getBoundingBox() const { return m_bbox; }
+    //const BoundingBox3f &getBoundingBox() const { return m_bbox; }
 
     // This cannot be const cause m_accel_medium->addMesh() need as a parameter a non const Mesh*
     Mesh* getBoundingBoxAsMesh() const { return m_mesh; }
@@ -106,16 +107,22 @@ public:
      * provided by this instance
      * */
     EClassType getClassType() const { return EMedium; }
-
+    
+    //TODO CHANGE
+    VolumeDataSource* m_vol_density = nullptr;
+    VolumeDataSource* m_vol_orientation = nullptr;
 protected:
     /// Create an empty mesh
     Medium();
 
 protected:
     std::string m_name;                  ///< Identifying name
-    BoundingBox3f m_bbox;                ///< Bounding box of the mesh
+    //BoundingBox3f m_bbox;                ///< Bounding box of the mesh
     PhaseFunction* m_pf = nullptr;
     Mesh* m_mesh = nullptr;
+    
+    
+    VolumeDataSource* m_vol_albedo = nullptr;
 };
 
 

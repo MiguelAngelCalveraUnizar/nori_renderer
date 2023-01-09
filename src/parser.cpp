@@ -68,6 +68,7 @@ NoriObject *loadFromXML(const std::string &filename) {
         ESampler              = NoriObject::ESampler,
         ETest                 = NoriObject::ETest,
         EReconstructionFilter = NoriObject::EReconstructionFilter,
+        EVolume               = NoriObject::EVolume,
 
         /* Properties */
         EBoolean = NoriObject::EClassTypeCount,
@@ -83,7 +84,6 @@ NoriObject *loadFromXML(const std::string &filename) {
         ERotate,
         EScale,
         ELookAt,
-
         EInvalid
     };
 
@@ -96,6 +96,7 @@ NoriObject *loadFromXML(const std::string &filename) {
     tags["emitter"]  = EEmitter;
     tags["camera"]     = ECamera;
     tags["medium"]     = EMedium;
+    tags["volume"] = EVolume;
     tags["phase"]      = EPhaseFunction;
     tags["integrator"] = EIntegrator;
     tags["sampler"]    = ESampler;

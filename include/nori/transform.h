@@ -87,12 +87,34 @@ public:
             r.mint, r.maxt
         );
     }
-
     /// Return a string representation
     std::string toString() const;
+    // Mitsuba stuff:
+    /// Create a translation transformation
+    static Transform translate(const Vector3f& v);
+
+    /*/// Create a rotation transformation around an arbitrary axis. The angle is specified in degrees
+    static Transform rotate(const Vector3f& axis, float angle);*/
+
+    /// Create a scale transformation
+    static Transform scale(const Vector3f& v);  
+
+    inline Point3f transformAffine(const Point3f& p) const {
+        float x = m_transform(0, 0) * p[0] + m_transform(0, 1) * p[1]
+                + m_transform(0, 2) * p[2] + m_transform(0, 3);
+        float y = m_transform(1, 0) * p[0] + m_transform(1, 1) * p[1]
+                + m_transform(1, 2) * p[2] + m_transform(1, 3);
+        float z = m_transform(2, 0) * p[0] + m_transform(2, 1) * p[1]
+                + m_transform(2, 2) * p[2] + m_transform(2, 3);
+        return Point3f(x, y, z);
+    }
+
+
 private:
     Eigen::Matrix4f m_transform;
     Eigen::Matrix4f m_inverse;
 };
+
+
 
 NORI_NAMESPACE_END

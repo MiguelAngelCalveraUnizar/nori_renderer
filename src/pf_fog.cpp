@@ -45,11 +45,13 @@ public:
     }
 
     void addChild(NoriObject* obj, const std::string& name = "none") {
-        switch (obj->getClassType()) {
+        /*switch (obj->getClassType()) {
         default:
             throw NoriException("Diffuse::addChild(<%s>) is not supported!",
                 classTypeName(obj->getClassType()));
-        }
+        }*/
+        throw NoriException("Diffuse::addChild(<%s>) is not supported!",
+            classTypeName(obj->getClassType()));
     }
 
 
