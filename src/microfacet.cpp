@@ -116,6 +116,17 @@ public:
         return true;
     }
 
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap()  { return false; }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    float displacement(const Point2f &uv) { return 0; }
+
     void addChild(NoriObject* obj, const std::string& name = "none") {
         switch (obj->getClassType()) {
         case ETexture:
@@ -208,6 +219,17 @@ public:
            hence we return true here */
         return true;
     }
+
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap() const { return false; }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    float displacement(const Point2f &uv) { return 0; }
 
     void addChild(NoriObject* obj, const std::string& name = "none") {
         switch (obj->getClassType()) {
@@ -372,6 +394,17 @@ public:
            hence we return true here */
         return true;
     }
+
+    /*  
+    * \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap() const { return false; }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    float displacement(const Point2f &uv) { return 0; }
 
     void addChild(NoriObject* obj, const std::string& name = "none") {
         switch (obj->getClassType()) {
