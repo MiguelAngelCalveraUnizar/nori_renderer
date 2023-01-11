@@ -34,8 +34,12 @@ struct MediumIntersection {
     Point3f xz;
     /// Position for the point in the middle of the Medium (for inscattering)
     Point3f xt;
-    // Probability of a point xt sampled
-    float pdf_xt;
+    // Probability. If distT<distZ it's the pdf of a point xt sampled, if not it's 1-cdf(xz)
+    float prob;
+    // Distance from x to xt:
+    float distT;
+    // Distance from x to xz (max dist of Medium):
+    float distZ;
 
     /// Local Frame
     Frame shFrame;
