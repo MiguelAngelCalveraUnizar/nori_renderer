@@ -91,7 +91,16 @@ float Scene::pdfEmitter(const Emitter *em) const {
     return (float)1. / (float)(m_emitters.size());
 }
 
-// Medium Intersect:
+
+/*Calculates first and second intersection with a medium
+* We assume only 1 medium in scene and that the medium only has a ingoing and outgoing point
+* but camera can be inside medium.
+* 3 Possible outcomes: 
+* No medium -> No intersection in m_accel_medium
+* Camera inside medium -> 1 intersection in m_accel_medium
+* Camera ouside medium -> 2 intersections in m_accel_medium
+* We also assume medIts.p is infinite if there's no intersection (enviroment)
+*/
 bool Scene::rayIntersectMedium(const Ray3f& ray, MediumIntersection& medIts) const {
     if (!m_medium) {
         return false;
@@ -111,8 +120,8 @@ bool Scene::rayIntersectMedium(const Ray3f& ray, MediumIntersection& medIts) con
         // If we now create a ray that starts a little bit after that intersection, 
         // we can call another one to find the end:
         Ray3f end_ray(ray);
-        // That 0.01 should be FLT_EPSILON
-        end_ray.o = end_ray.o + 0.01 * end_ray.d;
+
+        end_ray.o = end_ray.o + FLT_EPSILON * end_ray.d;
         Intersection end_its;
         bool endMediumFound = m_accel_medium->rayIntersect(end_ray, end_its, false);
         if (endMediumFound) {
@@ -155,7 +164,7 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
             break;
         
         case EMedium: {
-            std::cout << " Medium Aded as child to scene\n";
+            std::cout << "Medium Aded as child to scene\n";
             if (m_medium)
                 throw NoriException("There can only be one medium per scene!");
             m_medium = static_cast<Medium*>(obj);
