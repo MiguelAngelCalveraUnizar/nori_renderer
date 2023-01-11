@@ -24,12 +24,12 @@ public:
     * This assumes the medium is actually between the 2 points you selected, if you pick a new 
     * random point without checking if it's on the bounding box of the medium or not, it will not work
     */
-    virtual const float Transmittance(Point3f x, Point3f xz) const {
-        float res = std::exp(-mu_t * (x - xz).norm());
+    float Transmittance(Point3f x, Point3f xz) const {
+        float res = std::exp(-mu_t * (xz - x).norm());
         return res;
     }
 
-    virtual const float getScatteringCoeficient() const{
+    float getScatteringCoeficient() const{
         return mu_s;
     }
 
@@ -40,23 +40,28 @@ public:
     virtual void sampleBetween(float rnd, MediumIntersection& medIts) const {
         Point3f xz = medIts.xz;
         Point3f x = medIts.x;
+        Vector3f Z = (medIts.xz - medIts.x);
+        float tmax = Z.norm();
+
         // This frame will be different for heterogeneus media or media where the phase function has orientation.
         medIts.shFrame = Frame(Vector3f(1, 0, 0));
 
         float t = -log(rnd) / mu_t;
-        medIts.xt = x + t * (xz - x).normalized(); //t*direction
+        medIts.xt = x + t * Z.normalized(); //t*direction
 
         // Distance from x to xt:
         medIts.distT = t;
         // Distance from x to xz:
-        medIts.distZ = (medIts.xt - medIts.xz).norm();
-
-        if (medIts.distT < medIts.distZ) { //We didn't hit the surface!
+        medIts.distZ = tmax;
+        
+        
+        if (medIts.distT < tmax) { //We didn't hit the surface!
             medIts.prob = mu_t * exp(-mu_t * t);
         }
         else {
             // We actually save the cdf
-            medIts.prob = Transmittance(x, medIts.xt);
+            medIts.xt = xz;
+            medIts.prob = (Transmittance(x, medIts.xz));
         }
     }
 
