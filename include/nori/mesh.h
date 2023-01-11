@@ -50,7 +50,14 @@ struct Intersection {
     Frame geoFrame;
     /// Pointer to the associated mesh
     const Mesh *mesh;
-
+    //Shading geometry (used for bump mapping)
+    struct {
+        Vector3f dpdu;
+        Vector3f dpdv;
+        Normal3f n;
+        Normal3f dndu;
+        Normal3f dndv;
+    }shading;
     /// Create an uninitialized intersection record
     Intersection() : mesh(nullptr) { }
 
