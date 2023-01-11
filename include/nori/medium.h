@@ -100,10 +100,10 @@ public:
     std::string toString() const;
 
     /// For homogeneus and heterogeneus media to define correctly
-    virtual const float Transmittance(Point3f x, Point3f xz) const { return 1.0f; }
+    virtual float Transmittance(Point3f x, Point3f xz) const { return 0.0f; }
 
     // Check that this isn't a problem:
-    virtual const float getScatteringCoeficient() const { return 0.0f; }
+    virtual float getScatteringCoeficient() const { return 0.0f; }
 
     /**
      * \brief Return the type of object (i.e. Mesh/BSDF/etc.)
