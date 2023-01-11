@@ -121,7 +121,7 @@ bool Scene::rayIntersectMedium(const Ray3f& ray, MediumIntersection& medIts) con
         // we can call another one to find the end:
         Ray3f end_ray(ray);
 
-        end_ray.o = end_ray.o + FLT_EPSILON * end_ray.d;
+        end_ray.o = start_its.p + 0.01 * ray.d;
         Intersection end_its;
         bool endMediumFound = m_accel_medium->rayIntersect(end_ray, end_its, false);
         if (endMediumFound) {
