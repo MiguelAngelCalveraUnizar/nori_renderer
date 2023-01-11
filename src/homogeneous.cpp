@@ -42,9 +42,22 @@ public:
         Point3f x = medIts.x;
         // This frame will be different for heterogeneus media or media where the phase function has orientation.
         medIts.shFrame = Frame(Vector3f(1, 0, 0));
-        float t = log(rnd) / mu_t;
-        medIts.pdf_xt = mu_t * exp(-mu_t * t);
-        medIts.xt = x + t * (xz - x);
+
+        float t = -log(rnd) / mu_t;
+        medIts.xt = x + t * (xz - x).normalized(); //t*direction
+
+        // Distance from x to xt:
+        medIts.distT = t;
+        // Distance from x to xz:
+        medIts.distZ = (medIts.xt - medIts.xz).norm();
+
+        if (medIts.distT < medIts.distZ) { //We didn't hit the surface!
+            medIts.prob = mu_t * exp(-mu_t * t);
+        }
+        else {
+            // We actually save the cdf
+            medIts.prob = Transmittance(x, medIts.xt);
+        }
     }
 
 
