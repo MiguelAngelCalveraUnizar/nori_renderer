@@ -117,6 +117,17 @@ public:
      * or not to store photons on a surface
      */
     virtual bool isDiffuse() const { return false; }
+
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    virtual bool hasDisplacementMap() const { return false; }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    virtual Normal3f displacement(const Point2f &uv) const { return 0; }
 };
 
 NORI_NAMESPACE_END
