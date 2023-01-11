@@ -43,18 +43,26 @@ public:
             Lo = Le + Ld; // Ls is 0 (No medium -> no inscattering and transmittance = 1)
             return Lo;
         }
+
         // Now medIts has .medium and information about intersection
         scene->getMedium()->sampleBetween(sampler->next1D(), medIts);
-        Ld = DirectLight(scene, sampler, its, medIts, ray);
+        bool sampledInsideMedium = false;
+        float t = medIts.distT; //(medIts.xt - medIts.x).norm();
+        float z = medIts.distZ;//(medIts.xt - medIts.xz).norm();
+        // Sampling outside of the medium->inside a mesh which means doing DirectLight
+        //std::cout << " z: " << z << " t" << t<<"\n";
+        sampledInsideMedium = ((t-z) < FLT_EPSILON); 
 
-        // Inscattering
-        Ls = medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.pdf_xt;
+        if (sampledInsideMedium) {
+            // Inscattering
+            Ls = medIts.medium->Transmittance(medIts.x, medIts.xt) * Inscattering(scene, sampler, medIts, ray) / medIts.prob;
+        }
+        else {
+            Ld = medIts.medium->Transmittance(medIts.x, medIts.xz) *  DirectLight(scene, sampler, its, medIts, ray)/medIts.prob;
+        }
+
         // We sum everything (emitter and Direct light are affected by same transmittance)
-        Lo = Ls + (Le + Ld) * medIts.medium->Transmittance(medIts.x, medIts.xz);
-
-        /*if (isnan(Ls[0]) || isnan(Ls[1]) || isnan(Ls[2])) {
-            std::cout << "Ls is nan \n";
-        }*/
+        Lo = Ls + Ld + Le * medIts.medium->Transmittance(medIts.x, medIts.xz);
 
         return Lo;
     }
@@ -243,7 +251,6 @@ public:
                 std::cout << " ; mu_s " << medIts.medium->getScatteringCoeficient() << " ; p_em_wem " << p_em_wem;
                 std::cout << "pdf_light " << pdf_light << " ; pdf_light_point "<< pdf_light_point<<"\n";
             }
-
         }
         
         // Sample the phase function
@@ -285,9 +292,6 @@ public:
                 Lmat = it_next.mesh->getEmitter()->eval(emitterRecordMat) * fs * Transmittance_mats * medIts.medium->getScatteringCoeficient();
             }
         }
-        /*else {
-            // Here add support for enviromental lights if needed.
-        }*/
 
 
         // MIS both contributions
