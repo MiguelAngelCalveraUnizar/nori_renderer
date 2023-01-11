@@ -432,6 +432,7 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 				const Mesh *mesh = m_meshes[findMesh(idx)];
 
 				float u, v, t;
+
 				if (mesh->rayIntersect(idx, ray, u, v, t)) {
 					if (shadowRay)
 						return true;
@@ -493,6 +494,56 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		}
 		else {
 			its.shFrame = its.geoFrame;
+		}
+
+		//Triangle partial derivatives neede for bump mapping 
+		Point2f uv[3];
+		if (UV.size() > 0) {
+			uv[0] = UV.col(idx0);
+			uv[1] = UV.col(idx1);
+			uv[2] = UV.col(idx2);
+		}
+		else {
+
+			uv[0] = Point2f(0, 0);
+			uv[1] = Point2f(1, 0);
+			uv[2] = Point2f(1, 1);
+		}
+		Vector2f duv02 = uv[0] - uv[2];
+		Vector2f duv12 = uv[1] - uv[2];
+
+		Vector3f dp02 = p0 - p2;
+		Vector3f dp12 = p1 - p2;
+
+
+		float determinant = duv02[0] * duv12[1] - duv02[1] * duv12[0];
+		if (determinant != 0) {
+			its.shading.dpdu = (duv12[1] * dp02 - duv02[1] * dp12) / determinant;
+			its.shading.dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) / determinant;
+		}
+		else {
+			coordinateSystem((p1 - p0).cross(p2 - p0).normalized(), its.shading.dpdu, its.shading.dpdv);
+		}
+		
+		//Normal and its partial derivatives needed for bump mapping
+		Normal3f dn1, dn2;
+		if (N.size() > 0) {
+			dn1 = N.col(idx2) - N.col(idx0);
+			dn2 = N.col(idx2) - N.col(idx1);
+			if (determinant != 0) {
+				its.shading.dndu = (duv12[1] * dn1 - duv02[1] * dn2) / determinant;
+				its.shading.dndv = (-duv12[0] * dn1 + duv02[0] * dn2) / determinant;
+			}else {
+				Vector3f n0 = Vector3f(N.col(idx0));
+				Vector3f n1 = Vector3f(N.col(idx1));
+				Vector3f n2 = Vector3f(N.col(idx2));
+				Vector3f dn = (n2 - n0).cross(n2 - n1).normalized();
+				coordinateSystem(dn, its.shading.dpdu, its.shading.dpdv);
+			}
+		}
+		else {
+			its.shading.dndu = Normal3f(0, 0, 0);
+			its.shading.dndv = Normal3f(0, 0, 0);
 		}
 	}
 

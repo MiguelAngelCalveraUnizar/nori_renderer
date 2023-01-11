@@ -116,10 +116,40 @@ public:
         return true;
     }
 
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap() const {
+        return hasDisplacement;
+    }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    virtual Normal3f displacement(const Point2f& uv) const {
+        if (uv[0] <= 1 && uv[1] <= 1) {
+            Color3f color = m_displacement->eval(uv);
+            Normal3f d = Normal3f(color.r() * 2 - 1, color.g() * 2 - 1, color.b() * 2 - 1);
+            return d;
+        }
+        else {
+            return Normal3f(0., 0., 0.);
+        }
+    }
+
     void addChild(NoriObject* obj, const std::string& name = "none") {
+        hasDisplacement = false;
         switch (obj->getClassType()) {
         case ETexture:
-            if (name == "R0")
+            if (name == "displacement")
+            {
+                //delete m_displacement;
+                m_displacement = static_cast<Texture*>(obj);
+                hasDisplacement = true;
+                std::cout << "DISP LOADED" << std::endl;
+            }
+            else if (name == "R0")
             {
                 delete m_R0;
                 m_R0 = static_cast<Texture*>(obj);
@@ -129,6 +159,7 @@ public:
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
             }
+     
             else
                 throw NoriException("RoughConductor::addChild(<%s>,%s) is not supported!",
                     classTypeName(obj->getClassType()), name);
@@ -152,6 +183,8 @@ public:
 private:
     Texture* m_alpha;
     Texture* m_R0;
+    Texture *m_displacement;
+    bool hasDisplacement = false;
 };
 
 
@@ -209,7 +242,30 @@ public:
         return true;
     }
 
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap() const {
+        return hasDisplacement;
+    }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    virtual Normal3f displacement(const Point2f& uv) const {
+        if (uv[0] <= 1 && uv[1] <= 1) {
+            Color3f color = m_displacement->eval(uv);
+            Normal3f d = Normal3f(color.r() * 2 - 1, color.g() * 2 - 1, color.b() * 2 - 1);
+            return d;
+        }
+        else {
+            return Normal3f(0., 0., 0.);
+        }
+    }
+
     void addChild(NoriObject* obj, const std::string& name = "none") {
+        hasDisplacement = false;
         switch (obj->getClassType()) {
         case ETexture:
             if (name == "m_ka")
@@ -221,6 +277,11 @@ public:
             {
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
+            }
+            else if (name == "displacement")
+            {
+                m_displacement = static_cast<Texture*>(obj);
+                hasDisplacement = true;
             }
             else
                 throw NoriException("RoughDielectric::addChild(<%s>,%s) is not supported!",
@@ -250,6 +311,8 @@ private:
     float m_intIOR, m_extIOR;
     Texture* m_alpha;
     Texture* m_ka;
+    Texture* m_displacement;
+    bool hasDisplacement = false;
 };
 
 
@@ -373,7 +436,30 @@ public:
         return true;
     }
 
+    /*  
+    * \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    bool hasDisplacementMap() const {     
+        return hasDisplacement;
+    }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    virtual Normal3f displacement(const Point2f& uv) const {
+        if (uv[0] <= 1 && uv[1] <= 1) {
+            Color3f color = m_displacement->eval(uv);
+            Normal3f d = Normal3f(color.r() * 2 - 1, color.g() * 2 - 1, color.b() * 2 - 1);
+            return d;
+        }
+        else {
+            return Normal3f(0., 0., 0.);
+        }
+    }
+
     void addChild(NoriObject* obj, const std::string& name = "none") {
+        hasDisplacement = false;
         switch (obj->getClassType()) {
         case ETexture:
             if (name == "kd")
@@ -385,6 +471,11 @@ public:
             {
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
+            }
+            else if (name == "displacement")
+            {
+                m_displacement = static_cast<Texture*>(obj);
+                hasDisplacement = true;
             }
             else 
                 throw NoriException("RoughSubstrate::addChild(<%s>,%s) is not supported!",
@@ -414,6 +505,8 @@ private:
     float m_intIOR, m_extIOR;
     Texture* m_alpha;
     Texture* m_kd;
+    Texture* m_displacement;
+    bool hasDisplacement = false;
 };
 
 NORI_REGISTER_CLASS(RoughConductor, "roughconductor");

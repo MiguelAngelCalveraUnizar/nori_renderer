@@ -37,6 +37,12 @@ public:
             Le = Color3f(0.); // Emitter radiance
             // Find the surface that is visible in the requested direction
             if (scene->rayIntersect(next_ray, its)) {
+                //Modify the normal shading if the bsdf has a normal map
+                //Compute the new normal for bump mapping
+                if (its.mesh->getBSDF()->hasDisplacementMap()) {
+                    its.shading.n = its.shFrame.n + its.mesh->getBSDF()->displacement(its.uv);
+                    its.shFrame = Frame(its.shading.n);
+                }
                 // If it intersect but it's not an emitter create another bounce with some prob.
                 if (!its.mesh->isEmitter()) {
                     // If it's not an emitter, add contribution from a sampled light and keep sampling
@@ -66,7 +72,7 @@ public:
                     //Probability of the sample of the point of the light source
                     float pdf_light_point = light->pdf(emitterRecord);
                     Color3f fr_light = (its.mesh->getBSDF()->eval(EmitterBsdfRecord) * its.shFrame.n.dot(emitterRecord.wi)) / (pdf_light * pdf_light_point);
-                    
+                    fr_light = fr_light.clamp();
                     // 3b) MIS get weigth w_em:
                     //Compute the p_em(sample ems) and p_mat(sample ems)
                     p_em_wem = pdf_light_point * pdf_light;

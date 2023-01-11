@@ -90,6 +90,28 @@ public:
         return true;
     }
 
+    /*
+    *  \brief Checks if the bsdf has a displacement map.
+    * This displacement map is used for bump mapping
+    */
+    virtual bool hasDisplacementMap() const{
+        return hasDisplacement;
+    }
+
+    /*
+    * \brief Computes the displacement from the displacement texture
+    */
+    virtual Normal3f displacement(const Point2f& uv) const {
+        if (uv[0] <= 1 && uv[1] <= 1) {
+            Color3f color = m_displacement->eval(uv);
+            Normal3f d = Normal3f(color.r() * 2 - 1, color.g() * 2 - 1, color.b() * 2 -1);
+                return d;
+        }else {
+            return Normal3f(0.,0.,0.);
+        }
+    }
+
+
     /// Return a human-readable summary
     std::string toString() const {
         return tfm::format(
@@ -99,6 +121,7 @@ public:
     }
 
     void addChild(NoriObject* obj, const std::string& name = "none") {
+        hasDisplacement = false;
         switch (obj->getClassType()) {
         case ETexture:
             if (name == "albedo")
@@ -106,9 +129,15 @@ public:
                 delete m_albedo;
                 m_albedo = static_cast<Texture*>(obj);
             }
+            else if (name == "displacement")
+            {
+                //delete m_displacement;
+                m_displacement = static_cast<Texture*>(obj);
+                hasDisplacement = true;
+            }
             else
                 throw NoriException("Diffuse::addChild(<%s>,%s) is not supported!",
-                classTypeName(obj->getClassType()), name);
+                    classTypeName(obj->getClassType()), name);
             break;
 
         default:
@@ -121,6 +150,8 @@ public:
     EClassType getClassType() const { return EBSDF; }
 private:
     Texture *m_albedo;
+    Texture *m_displacement;
+    bool hasDisplacement = false;
 };
 
 NORI_REGISTER_CLASS(Diffuse, "diffuse");
