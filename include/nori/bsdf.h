@@ -127,7 +127,7 @@ public:
     /*
     * \brief Computes the displacement from the displacement texture
     */
-    virtual Normal3f displacement(const Point2f &uv) const { return 0; }
+    virtual Normal3f displacement(const Point2f& uv) const { return 0; }
 };
 
 NORI_NAMESPACE_END
