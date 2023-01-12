@@ -3,8 +3,6 @@
 #include <nori/scene.h>
 #include <nori/emitter.h>
 #include <nori/bsdf.h>
-
-
 #include <nori/pf.h>
 
 NORI_NAMESPACE_BEGIN

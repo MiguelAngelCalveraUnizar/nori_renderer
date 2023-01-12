@@ -46,9 +46,12 @@ public:
         // This frame will be different for heterogeneus media or media where the phase function has orientation.
         medIts.shFrame = Frame(Vector3f(1, 0, 0));
 
+        
         float t = -log(rnd) / mu_t;
         medIts.xt = x + t * Z.normalized(); //t*direction
-
+        if (mu_t <= 0.001) {
+            t = FLT_MAX;
+        }
         // Distance from x to xt:
         medIts.distT = t;
         // Distance from x to xz:

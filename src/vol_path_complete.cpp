@@ -8,10 +8,10 @@
 #include <nori/pf.h>
 
 NORI_NAMESPACE_BEGIN
-class VolPathIntegrator : public Integrator
+class VolumetricPath : public Integrator
 {
 public:
-    VolPathIntegrator(const PropertyList& props)
+    VolumetricPath(const PropertyList& props)
     {
 
     }
@@ -21,23 +21,23 @@ public:
         Color3f Ld(0.); // Direct Light to a point.
         Color3f Ls(0.); // Scattering light from the medium to a point
         Color3f Le(0.); // Emitter radiance
-        Color3f fr(1); //Thoughput
+		Color3f fr(1); //Thoughput
         float w_mat, p_mat_wmat = 0, p_em_wmat;
-        bool keepTracing = true;
-        Ray3f next_ray(ray);
-        EMeasure measure_last_bsdf = EUnknownMeasure;
-        // RR:
+		bool keepTracing = true;
+		Ray3f next_ray(ray);
+		EMeasure measure_last_bsdf = EUnknownMeasure;
+		// RR:
         float rr_limit = 0.9f;
         size_t n_bounces = 0;
-
-
-        while (keepTracing && fr.getLuminance() > 0) { // If it won't give light stop 
-            Le = Color3f(0.);
-
-            //Try to intersect the last generated ray
-            Intersection its;
-
-
+		
+		
+		while(keepTracing && fr.getLuminance() > 0) { // If it won't give light stop 
+			Le = Color3f(0.); 
+			
+			//Try to intersect the last generated ray
+			Intersection its;
+            
+            
             bool Intersected = scene->rayIntersect(next_ray, its);
             //bool notIntersected = !Intersected;
             bool intersectedWithEmitter = true;
@@ -67,20 +67,12 @@ public:
                         // But if it's discrete, it's the only direction that can go to.
                         w_mat = 1;
                     }
-                    MediumIntersection medIts;
-                    medIts.o = next_ray.o;
-                    medIts.p = its.p;
-                    bool mediumFound = scene->rayIntersectMedium(next_ray, medIts);
-                    if (mediumFound) {
-                        fr *= medIts.medium->Transmittance(medIts.x, medIts.xz);
-                    }
-
                     Lo += fr * Le * w_mat;
 
                 }
             }
 
-            if (intersectedWithNonEmitter || !Intersected) {
+            if(intersectedWithNonEmitter || !Intersected){
                 // If it is not a emitter or we didn't intersect
                 // Check if next_ray travels thought a participating media
                 Vector3f w = next_ray.d;
@@ -93,7 +85,7 @@ public:
                     // If not found intersection, we set it at infinity
                     medIts.p = Point3f(FLT_MAX);
                 }
-
+                
                 bool mediumFound = scene->rayIntersectMedium(next_ray, medIts);
                 bool sampledInsideMedium = false;
                 if (mediumFound) {
@@ -104,8 +96,8 @@ public:
                     float t = medIts.distT; //(medIts.xt - medIts.x).norm();
                     float z = medIts.distZ;//(medIts.xt - medIts.p).norm();
 
-                    sampledInsideMedium = ((t - z) < FLT_EPSILON); // Sampling outside of the medium->inside a mesh which means doing DirectLight
-
+                    sampledInsideMedium = (t >= z); // Sampling outside of the medium->inside a mesh which means doing DirectLight
+                        
                     fr *= medIts.medium->Transmittance(medIts.x, medIts.xt) / medIts.prob;
                 }
                 if (sampledInsideMedium && mediumFound) {
@@ -120,7 +112,7 @@ public:
                     //Compute the p_mat(sample mats)
                     p_mat_wmat = medIts.medium->getPhaseFunction()->pdf(pfRecord);
                     // New ray :
-                    next_ray = Ray3f(medIts.xt, medIts.toWorld(pfRecord.wo));
+                    next_ray = Ray3f(medIts.xt, its.toWorld(pfRecord.wo));
 
                 }
                 else {
@@ -169,7 +161,7 @@ public:
                     }
                 }
             }
-            // Extra end conditions:
+			// Extra end conditions:
             // For RR saying to not continuing with probability of sample()
             rr_limit = std::min(0.9f, (std::max(fr[0], std::max(fr[1], fr[2]))));
             // not continuing with probability of sample() accumulated
@@ -186,13 +178,13 @@ public:
                 }
             }
             n_bounces += 1;
-        }
+		}
         return Lo;
     }
-
-
-    /*
-    * Sample a light for a direct light to the point in intersection (xz).
+	
+	
+    /* 
+    * Sample a light for a direct light to the point in intersection (xz). 
     * It assumes a its.p is a intersection to a material
     * We DON'T get the next direction to sample, that has to be done separatly
     */
@@ -261,7 +253,7 @@ public:
     }
 
     /*
-    * Sample a light for a direct light to the point in MediumIntersection (xz).
+    * Sample a light for a direct light to the point in MediumIntersection (xz). 
     * It assumes a its.p is a intersection to a medium, and that MediumIntersection is correctly defined
     * We DON'T get the next direction to sample, that has to be done separatly
     */
@@ -336,5 +328,5 @@ public:
     }
 
 };
-NORI_REGISTER_CLASS(VolPathIntegrator, "vol_path_integrator");
+NORI_REGISTER_CLASS(VolumetricPath,"vol_path");
 NORI_NAMESPACE_END

@@ -7,7 +7,7 @@ NORI_NAMESPACE_BEGIN
 class PathTracingMIS : public Integrator
 {
 public:
-    PathTracingMIS(const PropertyList &props)
+    PathTracingMIS(const PropertyList& props)
     {
         /* No parameters this time */
     }
@@ -31,7 +31,7 @@ public:
         float p_mat_wem = 1;
         float p_em_wmat = 1;
         float p_mat_wmat = 1;
-        
+
         while (keepTracing && fr.getLuminance() > 0) { // If it won't give light stop 
             // 1:
             Le = Color3f(0.); // Emitter radiance
@@ -78,7 +78,7 @@ public:
                     p_em_wem = pdf_light_point * pdf_light;
                     // For MIS we need to evaluate respect to p_mat_wem the pdf of the direction
                     p_mat_wem = its.mesh->getBSDF()->pdf(EmitterBsdfRecord);
-                    
+
                     w_em = (p_em_wem + p_mat_wem) > FLT_EPSILON ? p_em_wem / (p_em_wem + p_mat_wem) : 0;
 
                     // 4 Add up contribution of emitter
@@ -128,10 +128,10 @@ public:
             else {
                 // If it doesn't intersect stop, and get Background (enviromental light as well)
                 keepTracing = false;
-                
+
                 const Emitter* env_emitter = scene->getEnvironmentalEmitter();
                 // If we didn't intersect with anything and the scene has a enviromental emitter:
-                if (env_emitter){
+                if (env_emitter) {
                     // Then the background has an emmitter.
                     // do we have to weight this one as well?
                     // TODO HERE
@@ -180,5 +180,5 @@ public:
         return "Direct Whitted Integrator []";
     }
 };
-NORI_REGISTER_CLASS(PathTracingMIS,"path_mis");
+NORI_REGISTER_CLASS(PathTracingMIS, "path_mis");
 NORI_NAMESPACE_END

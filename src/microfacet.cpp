@@ -2,10 +2,10 @@
     This file is part of Nori, a simple educational ray tracer
 
     Copyright (c) 2015 by Wenzel Jakob
-	
-	v1 - Dec 01 2020
+
+    v1 - Dec 01 2020
     v2 - Oct 30 2021
-	Copyright (c) 2021 by Adrian Jarabo
+    Copyright (c) 2021 by Adrian Jarabo
 
     Nori is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License Version 3
@@ -57,7 +57,7 @@ public:
         float alpha = m_alpha->eval(bRec.uv).mean();
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float cosThetaO = Frame::cosTheta(bRec.wo);
-        
+
         float D = Reflectance::BeckmannNDF(wh, alpha);
         Color3f F = Reflectance::fresnel(cosThetaI, m_R0->eval(bRec.uv));
         float G = Reflectance::G1(bRec.wi, wh, alpha) * Reflectance::G1(bRec.wo, wh, alpha);
@@ -88,17 +88,17 @@ public:
         // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
-        
+
         // float alpha = m_alpha->eval(bRec.uv).getLuminance();
         float alpha = m_alpha->eval(bRec.uv).mean();
         bRec.measure = ESolidAngle;
-        
+
         // Sampling wh and getting wo from it.
         Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
         // Calculate wo with equation from https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
-        bRec.wo = (-bRec.wi + 2*bRec.wi.dot(wh)*wh);
+        bRec.wo = (-bRec.wi + 2 * bRec.wi.dot(wh) * wh);
         bRec.wo.normalize();
-        
+
         // Return the value 
         float pdf_sample = pdf(bRec);
         if (pdf_sample < FLT_EPSILON) {
@@ -159,7 +159,7 @@ public:
                 delete m_alpha;
                 m_alpha = static_cast<Texture*>(obj);
             }
-     
+
             else
                 throw NoriException("RoughConductor::addChild(<%s>,%s) is not supported!",
                     classTypeName(obj->getClassType()), name);
@@ -183,7 +183,7 @@ public:
 private:
     Texture* m_alpha;
     Texture* m_R0;
-    Texture *m_displacement;
+    Texture* m_displacement;
     bool hasDisplacement = false;
 };
 
@@ -342,7 +342,7 @@ public:
 
         float cosThetaI = Frame::cosTheta(bRec.wi);
         float cosThetaO = Frame::cosTheta(bRec.wo);
-        
+
 
         if (bRec.measure != ESolidAngle
             || cosThetaI <= 0
@@ -414,7 +414,7 @@ public:
         float F = Reflectance::fresnel(cosThetaI, m_extIOR, m_intIOR);
         //Russian Roulette 
         float rnd = (float)rand() / RAND_MAX;
-        if ( rnd < F) {
+        if (rnd < F) {
             //Diffusion
             //Sample the half vector
             Vector3f wh = Warp::squareToBeckmann(_sample, alpha);
@@ -436,11 +436,11 @@ public:
         return true;
     }
 
-    /*  
+    /*
     * \brief Checks if the bsdf has a displacement map.
     * This displacement map is used for bump mapping
     */
-    bool hasDisplacementMap() const {     
+    bool hasDisplacementMap() const {
         return hasDisplacement;
     }
 
@@ -477,7 +477,7 @@ public:
                 m_displacement = static_cast<Texture*>(obj);
                 hasDisplacement = true;
             }
-            else 
+            else
                 throw NoriException("RoughSubstrate::addChild(<%s>,%s) is not supported!",
                     classTypeName(obj->getClassType()), name);
             break;

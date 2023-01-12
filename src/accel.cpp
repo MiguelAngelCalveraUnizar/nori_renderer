@@ -1,19 +1,19 @@
 /*
-    This file is part of Nori, a simple educational ray tracer
+	This file is part of Nori, a simple educational ray tracer
 
-    Copyright (c) 2015 by Wenzel Jakob
+	Copyright (c) 2015 by Wenzel Jakob
 
-    Nori is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License Version 3
-    as published by the Free Software Foundation.
+	Nori is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License Version 3
+	as published by the Free Software Foundation.
 
-    Nori is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-    GNU General Public License for more details.
+	Nori is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <nori/accel.h>
@@ -44,9 +44,9 @@ struct Bins {
  */
 class BVHBuildTask : public tbb::task {
 private:
-	Accel &bvh;
+	Accel& bvh;
 	n_UINT node_idx;
-	n_UINT *start, *end, *temp;
+	n_UINT* start, * end, * temp;
 
 public:
 	/// Build-related parameters
@@ -85,12 +85,12 @@ public:
 	 *    construction purposes. The usable length is <tt>end-start</tt>
 	 *    unsigned integers.
 	 */
-	BVHBuildTask(Accel &bvh, n_UINT node_idx, n_UINT *start, n_UINT *end, n_UINT *temp)
+	BVHBuildTask(Accel& bvh, n_UINT node_idx, n_UINT* start, n_UINT* end, n_UINT* temp)
 		: bvh(bvh), node_idx(node_idx), start(start), end(end), temp(temp) { }
 
-	task *execute() {
+	task* execute() {
 		n_UINT size = (n_UINT)(end - start);
-		Accel::BVHNode &node = bvh.m_nodes[node_idx];
+		Accel::BVHNode& node = bvh.m_nodes[node_idx];
 
 		/* Switch to a serial build when less than SERIAL_THRESHOLD triangles are left */
 		if (size < SERIAL_THRESHOLD) {
@@ -108,30 +108,30 @@ public:
 			tbb::blocked_range<n_UINT>(0u, size, GRAIN_SIZE),
 			Bins(),
 			/* MAP: Bin a number of triangles and return the resulting 'Bins' data structure */
-			[&](const tbb::blocked_range<n_UINT> &range, Bins result) {
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
+			[&](const tbb::blocked_range<n_UINT>& range, Bins result) {
+				for (n_UINT i = range.begin(); i != range.end(); ++i) {
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
 
-				int index = std::min(std::max(
-					(int)((centroid - min) * inv_bin_size), 0),
-					(Bins::BIN_COUNT - 1));
+					int index = std::min(std::max(
+						(int)((centroid - min) * inv_bin_size), 0),
+						(Bins::BIN_COUNT - 1));
 
-				result.counts[index]++;
-				result.bbox[index].expandBy(bvh.getBoundingBox(f));
-			}
-			return result;
-		},
+					result.counts[index]++;
+					result.bbox[index].expandBy(bvh.getBoundingBox(f));
+				}
+				return result;
+			},
 			/* REDUCE: Combine two 'Bins' data structures */
-			[](const Bins &b1, const Bins &b2) {
-			Bins result;
-			for (int i = 0; i < Bins::BIN_COUNT; ++i) {
-				result.counts[i] = b1.counts[i] + b2.counts[i];
-				result.bbox[i] = BoundingBox3f::merge(b1.bbox[i], b2.bbox[i]);
+				[](const Bins& b1, const Bins& b2) {
+				Bins result;
+				for (int i = 0; i < Bins::BIN_COUNT; ++i) {
+					result.counts[i] = b1.counts[i] + b2.counts[i];
+					result.bbox[i] = BoundingBox3f::merge(b1.bbox[i], b2.bbox[i]);
+				}
+				return result;
 			}
-			return result;
-		}
-		);
+			);
 
 		/* Choose the best split plane based on the binned data */
 		BoundingBox3f bbox_left[Bins::BIN_COUNT];
@@ -181,26 +181,26 @@ public:
 
 		tbb::parallel_for(
 			tbb::blocked_range<n_UINT>(0u, size, GRAIN_SIZE),
-			[&](const tbb::blocked_range<n_UINT> &range) {
-			n_UINT count_left = 0, count_right = 0;
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
-				int index = (int)((centroid - min) * inv_bin_size);
-				(index <= best_index ? count_left : count_right)++;
+			[&](const tbb::blocked_range<n_UINT>& range) {
+				n_UINT count_left = 0, count_right = 0;
+				for (n_UINT i = range.begin(); i != range.end(); ++i) {
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
+					int index = (int)((centroid - min) * inv_bin_size);
+					(index <= best_index ? count_left : count_right)++;
+				}
+				n_UINT idx_l = offset_left.fetch_add(count_left);
+				n_UINT idx_r = offset_right.fetch_add(count_right);
+				for (n_UINT i = range.begin(); i != range.end(); ++i) {
+					n_UINT f = start[i];
+					float centroid = bvh.getCentroid(f)[axis];
+					int index = (int)((centroid - min) * inv_bin_size);
+					if (index <= best_index)
+						temp[idx_l++] = f;
+					else
+						temp[idx_r++] = f;
+				}
 			}
-			n_UINT idx_l = offset_left.fetch_add(count_left);
-			n_UINT idx_r = offset_right.fetch_add(count_right);
-			for (n_UINT i = range.begin(); i != range.end(); ++i) {
-				n_UINT f = start[i];
-				float centroid = bvh.getCentroid(f)[axis];
-				int index = (int)((centroid - min) * inv_bin_size);
-				if (index <= best_index)
-					temp[idx_l++] = f;
-				else
-					temp[idx_r++] = f;
-			}
-		}
 		);
 		memcpy(start, temp, size * sizeof(n_UINT));
 		assert(offset_left == left_count && offset_right == size);
@@ -210,7 +210,7 @@ public:
 		c.set_ref_count(2);
 
 		/* Post right subtree to scheduler */
-		BVHBuildTask &b = *new (c.allocate_child())
+		BVHBuildTask& b = *new (c.allocate_child())
 			BVHBuildTask(bvh, node_idx_right, start + left_count,
 				end, temp + left_count);
 		spawn(b);
@@ -224,19 +224,19 @@ public:
 	}
 
 	/// Single-threaded build function
-	static void execute_serially(Accel &bvh, n_UINT node_idx, n_UINT *start, n_UINT *end, n_UINT *temp) {
-		Accel::BVHNode &node = bvh.m_nodes[node_idx];
+	static void execute_serially(Accel& bvh, n_UINT node_idx, n_UINT* start, n_UINT* end, n_UINT* temp) {
+		Accel::BVHNode& node = bvh.m_nodes[node_idx];
 		n_UINT size = (n_UINT)(end - start);
 		float best_cost = (float)INTERSECTION_COST * size;
 		int64_t best_index = -1, best_axis = -1;
-		float *left_areas = (float *)temp;
+		float* left_areas = (float*)temp;
 
 		/* Try splitting along every axis */
 		for (int axis = 0; axis < 3; ++axis) {
 			/* Sort all triangles based on their centroid positions projected on the axis */
 			std::sort(start, end, [&](n_UINT f1, n_UINT f2) {
 				return bvh.getCentroid(f1)[axis] < bvh.getCentroid(f2)[axis];
-			});
+				});
 
 			BoundingBox3f bbox;
 			for (n_UINT i = 0; i < size; ++i) {
@@ -282,7 +282,7 @@ public:
 
 		std::sort(start, end, [&](n_UINT f1, n_UINT f2) {
 			return bvh.getCentroid(f1)[best_axis] < bvh.getCentroid(f2)[best_axis];
-		});
+			});
 
 		n_UINT left_count = (n_UINT)best_index;
 		n_UINT node_idx_left = node_idx + 1;
@@ -296,7 +296,7 @@ public:
 	}
 };
 
-void Accel::addMesh(Mesh *mesh) {
+void Accel::addMesh(Mesh* mesh) {
 	m_meshes.push_back(mesh);
 	m_meshOffset.push_back(m_meshOffset.back() + mesh->getTriangleCount());
 	m_bbox.expandBy(mesh->getBoundingBox());
@@ -341,7 +341,7 @@ void Accel::build() {
 	for (n_UINT i = 0; i < size; ++i)
 		m_indices[i] = i;
 
-	n_UINT *indices = m_indices.data(), *temp = new n_UINT[size];
+	n_UINT* indices = m_indices.data(), * temp = new n_UINT[size];
 	BVHBuildTask& task = *new(tbb::task::allocate_root())
 		BVHBuildTask(*this, 0u, indices, indices + size, temp);
 	tbb::task::spawn_root_and_wait(task);
@@ -356,18 +356,18 @@ void Accel::build() {
 	for (int64_t i = stats.second - 1, j = m_nodes.size(), skipped = 0; i >= 0; --i) {
 		while (m_nodes[--j].isUnused())
 			skipped++;
-		BVHNode &new_node = compactified[i];
+		BVHNode& new_node = compactified[i];
 		new_node = m_nodes[j];
 		skipped_accum[j] = (n_UINT)skipped;
 
 		if (new_node.isInner()) {
 			new_node.inner.rightChild = (n_UINT)
 				(i + new_node.inner.rightChild - j -
-				(skipped - skipped_accum[new_node.inner.rightChild]));
+					(skipped - skipped_accum[new_node.inner.rightChild]));
 		}
 	}
 	cout << "done (took " << timer.elapsedString() << " and "
-		<< memString(sizeof(BVHNode) * m_nodes.size() + sizeof(n_UINT)*m_indices.size())
+		<< memString(sizeof(BVHNode) * m_nodes.size() + sizeof(n_UINT) * m_indices.size())
 		<< ", SAH cost = " << stats.first
 		<< ")." << endl;
 
@@ -375,7 +375,7 @@ void Accel::build() {
 }
 
 std::pair<float, n_UINT> Accel::statistics(n_UINT node_idx) const {
-	const BVHNode &node = m_nodes[node_idx];
+	const BVHNode& node = m_nodes[node_idx];
 	if (node.isLeaf()) {
 		return std::make_pair((float)BVHBuildTask::INTERSECTION_COST * node.leaf.size, 1u);
 	}
@@ -395,7 +395,7 @@ std::pair<float, n_UINT> Accel::statistics(n_UINT node_idx) const {
 	}
 }
 
-bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) const {
+bool Accel::rayIntersect(const Ray3f& _ray, Intersection& its, bool shadowRay) const {
 	n_UINT node_idx = 0, stack_idx = 0, stack[64];
 
 	its.t = std::numeric_limits<float>::infinity();
@@ -412,7 +412,7 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 	n_UINT f = 0;
 
 	while (true) {
-		const BVHNode &node = m_nodes[node_idx];
+		const BVHNode& node = m_nodes[node_idx];
 
 		if (!node.bbox.rayIntersect(ray)) {
 			if (stack_idx == 0)
@@ -429,7 +429,7 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		else {
 			for (n_UINT i = node.start(), end = node.end(); i < end; ++i) {
 				n_UINT idx = m_indices[i];
-				const Mesh *mesh = m_meshes[findMesh(idx)];
+				const Mesh* mesh = m_meshes[findMesh(idx)];
 
 				float u, v, t;
 
@@ -456,11 +456,11 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		bary << 1 - its.uv.sum(), its.uv;
 
 		/* References to all relevant mesh buffers */
-		const Mesh *mesh = its.mesh;
-		const MatrixXf &V = mesh->getVertexPositions();
-		const MatrixXf &N = mesh->getVertexNormals();
-		const MatrixXf &UV = mesh->getVertexTexCoords();
-		const MatrixXu &F = mesh->getIndices();
+		const Mesh* mesh = its.mesh;
+		const MatrixXf& V = mesh->getVertexPositions();
+		const MatrixXf& N = mesh->getVertexNormals();
+		const MatrixXf& UV = mesh->getVertexTexCoords();
+		const MatrixXu& F = mesh->getIndices();
 
 		/* Vertex indices of the triangle */
 		n_UINT idx0 = F(0, f), idx1 = F(1, f), idx2 = F(2, f);
@@ -524,7 +524,7 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 		else {
 			coordinateSystem((p1 - p0).cross(p2 - p0).normalized(), its.shading.dpdu, its.shading.dpdv);
 		}
-		
+
 		//Normal and its partial derivatives needed for bump mapping
 		Normal3f dn1, dn2;
 		if (N.size() > 0) {
@@ -533,7 +533,8 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 			if (determinant != 0) {
 				its.shading.dndu = (duv12[1] * dn1 - duv02[1] * dn2) / determinant;
 				its.shading.dndv = (-duv12[0] * dn1 + duv02[0] * dn2) / determinant;
-			}else {
+			}
+			else {
 				Vector3f n0 = Vector3f(N.col(idx0));
 				Vector3f n1 = Vector3f(N.col(idx1));
 				Vector3f n2 = Vector3f(N.col(idx2));
@@ -551,4 +552,3 @@ bool Accel::rayIntersect(const Ray3f &_ray, Intersection &its, bool shadowRay) c
 }
 
 NORI_NAMESPACE_END
-
